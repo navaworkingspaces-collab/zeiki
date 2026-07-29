@@ -771,6 +771,34 @@ Lo que **NO** se hace en Zeiki, y por qué.
 
 ---
 
+## 🗂️ Documentos pendientes (estado al 2026-07-29)
+
+> **Esta sección es la fuente única de "qué docs faltan".** Si un documento se crea, se quita de aquí. Si se descubre que falta uno nuevo, se agrega.
+
+| Documento | Estado | Quién lo crea | Cuándo se necesita |
+|-----------|--------|---------------|---------------------|
+| `docs/runbooks/rotate-secrets.md` | Pendiente | Mavis | Cuando se defina el proceso de rotación de secretos (Fase 2). |
+| `docs/runbooks/disaster-recovery.md` | Pendiente | Mavis | Antes de Fase 4 (primera vez que se necesite RTO < 4h). |
+| `docs/postmortems/` (directorio) | Pendiente | Cuando ocurra el primer P1/P2. | Ver `target-architecture.md §12.1`. |
+| `docs/setup.md` | Pendiente | Mavis | Cuando haya un segundo dev o un setup documentado. |
+| `docs/current-state.md` | Pendiente | Mavis | Al cerrar la primera HDU de la reescritura. |
+| `docs/handoffs/` | Pendiente | Mavis | Al cerrar la primera HDU de la reescritura. |
+| `docs/features/<nombre>.md` | Pendiente | Mavis | Al cerrar la primera feature del MVP. |
+| `codemagic.yaml` | Pendiente | Mavis | Al configurar CI/CD (Fase 1). |
+| `supabase/migrations/` (primera migración) | Pendiente | Mavis | Al implementar la primera HDU con cambio de schema. |
+| `feature_sync_test.dart` | Pendiente | Mavis | Al implementar el sistema de feature flags. |
+| **Doc auto-generada de feature flags** | Aspiración | Mavis | Al implementar el sistema de feature flags. |
+| **Threat model (STRIDE)** | Pendiente | Mavis | Fase 2/3 (cuando se implemente el manejo de eFirma). |
+| **Plan de test de integración con Supabase** | Pendiente | Mavis | Antes de la primera feature de Fiscal (descarga SAT). |
+| **Plan de release con usuarios** | Pendiente | Mavis | Cuando llegue el primer usuario. |
+
+**Cómo se usa esta lista:**
+
+- Al inicio de cada cleanup de HDU, Mavis revisa si algún documento de la lista ya se creó. Si sí, se quita de aquí y se menciona en el spec de la HDU correspondiente.
+- Si Mavis descubre un documento nuevo que falta, lo agrega aquí con `Pendiente`.
+
+---
+
 ## 🛠️ Cómo se mantiene este documento
 
 - **Cuándo se actualiza:** cada vez que cambia una decisión arquitectónica (nuevo ADR, nueva restricción, nueva fase completada).

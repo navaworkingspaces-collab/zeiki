@@ -358,4 +358,33 @@ Si la respuesta a las 4 es "no, sí, sí, no" — busca una alternativa. Si desp
 
 ---
 
+## 12. Migraciones SQL (mini-convention)
+
+> **Status:** Diferido en `target-architecture.md §13.1` (sin versionado formal de BD). Pero "ad-hoc sin convention" es recipe for disaster. Esta mini-convention aplica **ya**, con el versionado formal llegando en Fase 3.
+
+### Reglas
+
+- **Nombre de archivo:** `YYYYMMDD_HHMMSS_<slug-descriptivo>.sql` (timestamp + slug).
+  - Ejemplo: `20260729_143000_add-sat-cfdis-index.sql`.
+  - El orden lexicográfico es el orden de ejecución. Timestamp asegura unicidad.
+- **Ubicación:** `supabase/migrations/` (convención de Supabase CLI).
+- **Idempotencia obligatoria:** usar `IF NOT EXISTS` en CREATE, `IF EXISTS` en DROP, `ON CONFLICT DO NOTHING` en INSERT.
+- **Una migración por cambio lógico.** No mezclar "agregar tabla" con "agregar columna a otra tabla".
+- **Migración va con código** en el mismo PR. Si la migración es de Fase 1+ (cuando se tenga), se taggea junto con el código que la consume.
+- **Rollback explícito:** cada migración tiene un `_rollback.sql` en el mismo directorio. Si la migración es destructiva (DROP, ALTER COLUMN), el rollback se prueba en staging antes de producción.
+- **No borrar migraciones aplicadas.** Marcar como `deprecated` con un comentario al inicio.
+- **Backfill (llenar datos nuevos en columnas existentes):** va en una migración separada, después de la migración estructural.
+
+### Aplicación
+
+- **Local / dev:** `supabase db reset` aplica todas las migraciones desde cero.
+- **Staging / prod:** `supabase db push` aplica solo las migraciones nuevas. La CLI lleva el tracking.
+
+### Testing
+
+- Después de aplicar, un test verifica que la migración no rompió el schema (comparar contra un snapshot del schema esperado).
+- Backfill se prueba con datos sintéticos en staging.
+
+---
+
 *Mantener este archivo vivo. Si una convención no está aquí y se vuelve recurrente, agregarla. Si entra en conflicto con la Target Architecture, gana la Target Architecture.*
