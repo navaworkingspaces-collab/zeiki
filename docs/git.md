@@ -303,6 +303,31 @@ Si un dev nuevo no puede clonar el repo y buildear con un solo comando, el build
 - Rotación documentada en `docs/runbooks/rotate-secrets.md` (pendiente).
 - Cada secreto tiene un dueño y fecha de expiración.
 
+### Secret management end-to-end (proceso)
+
+El flujo completo de un secreto (Supabase anon key, Google OAuth client secret, etc.) sigue estos pasos:
+
+1. **Desarrollo local:** secreto va en `assets/.env` (en `.gitignore`).
+2. **CI build:** Code Magic lee el secreto desde su panel de Secrets, lo inyecta como variable de entorno al build.
+3. **APK firmado:** el secreto se "hornea" en el APK. **CUIDADO:** el `google-services.json` con OAuth client_id es público una vez desempaquetado, así que el **client_secret NUNCA va al APK** — solo el `client_id` público.
+4. **Cliente (móvil):** los secretos del usuario (eFirma password, etc.) se guardan en `flutter_secure_storage` (Keychain iOS / EncryptedSharedPreferences Android).
+5. **Servidor (Edge Functions):** los secretos se leen con `Deno.env.get()`, nunca en código. Code Magic los pasa al deploy.
+6. **Rotación:** cada 6 meses o ante sospecha de compromiso. Procedimiento en `docs/runbooks/rotate-secrets.md` (pendiente).
+
+**Caso especial: Google OAuth client_secret.** El `client_secret` se valida en el **servidor** (Edge Function proxy), no en el cliente. El cliente solo conoce el `client_id` público. Por eso existe `auth-google-proxy` (ver ADR-007 — el proxy de Google OAuth que bypassea el bug de GoTrue).
+
+**Status:** TBD. `docs/runbooks/rotate-secrets.md` aún no está escrito. Se documenta en Fase 2.
+
+### Deploy de Edge Functions
+
+Las Edge Functions se deployan con **Supabase CLI** (no con Code Magic, que solo buildea la app):
+
+- **Manual local:** `supabase functions deploy <nombre>` desde la línea de comandos.
+- **Automático en CI:** Code Magic corre `supabase functions deploy` después del build de la app si hay cambios en `supabase/functions/`.
+- **Secrets de la función:** se configuran con `supabase secrets set KEY=value` (queda en Supabase, no en el repo).
+
+**Status:** TBD. El `codemagic.yaml` aún no incluye el paso de deploy de functions.
+
 ---
 
 ## 8. Rollback
@@ -359,6 +384,22 @@ git push origin v1.4.0
 
 - Hoy el proyecto no tiene releases (es dev activo). Las reglas de versionado se aplican **cuando empiecen los releases**.
 - Si nunca se llega a esa fase, la sección queda como referencia para cuando toque.
+
+### Versionado cruzado (app + Edge Functions + BD)
+
+Cuando se llegue a releases, un "release" de Zeiki coordina **tres componentes**:
+
+- **App (Flutter):** tag `v1.4.0` en git.
+- **Edge Functions (Deno):** tag en el mismo commit, identificable por convención (`edge-functions: v1.4.0` en metadata).
+- **Migraciones SQL:** referenciadas en el tag con su timestamp (ej. "incluye migración `20260801_120000_add-x.sql`").
+
+**Convención propuesta** (a aplicar cuando haya releases):
+
+- Tag de git incluye los tres: `[app v1.4.0] [edge v1.4.0] [migrations: 20260801]`.
+- Si uno no cambia, se omite (ej. solo app: `[app v1.4.0]`).
+- La spec de la HDU que se releasea debe declarar los tres componentes.
+
+**Status:** TBD. Se define formalmente cuando se hagan los primeros 5 releases.
 
 ---
 

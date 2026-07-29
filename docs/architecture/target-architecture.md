@@ -518,6 +518,19 @@ Feature flags permiten desplegar código que no se activa para todos.
 3. Remover el flag del código y de la BD.
 4. HDU de cleanup dedicada.
 
+### Estrategia de deprecación de features
+
+Cuando una feature se va a apagar (no solo un flag, sino la feature completa):
+
+1. **Anuncio previo:** changelog con fecha de deprecación. Al menos 1 release de aviso antes de apagar.
+2. **Migración si aplica:** si la feature se reemplaza por otra, la nueva está lista y documentada antes de apagar la vieja.
+3. **Kill switch:** durante la transición, ambas features conviven detrás de un flag, para rollback rápido.
+4. **Telemetría de uso:** antes de apagar, confirmar que el uso real es <5% de los usuarios activos. Si no, retrasar.
+5. **Comunicación al usuario:** si la feature es visible para el usuario, notificarle en la app (banner, modal) con al menos 1 release de anticipación.
+6. **Cleanup post-apagado:** remover código, tests, docs, migraciones de datos (si las hubo). HDU dedicada.
+
+**Status:** Diferido. Aplica cuando se apague la primera feature (ej. "Descarga del día" cuando esté 100% reemplazada por la automática).
+
 ### Cómo se crean
 
 - Definidos en código como enum type-safe (`AppFeature`).
