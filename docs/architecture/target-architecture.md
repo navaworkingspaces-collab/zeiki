@@ -473,6 +473,8 @@ Feature flags permiten desplegar código que no se activa para todos.
 - Configuración por tier + override por usuario (testing) en backend.
 - Sincronización entre código y BD verificada por test.
 
+**Status:** TBD. El test `feature_sync_test.dart` que verifica que el enum y la tabla `app_tier_features` estén sincronizados **no está escrito todavía**. Se documenta como aspiración honesta; no se afirma que existe.
+
 ### Cómo se evalúan
 
 ```dart

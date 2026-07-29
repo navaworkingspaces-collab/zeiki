@@ -332,7 +332,7 @@ DomainException        ← clase base
 | Configuración de entorno | URL de Supabase, region | `assets/.env` |
 | Reglas de negocio | Catálogo de regímenes fiscales, topes de ISR | `core/constants/` |
 | Feature flags | `AppFeature.nuevoDashboard` | Definidos en código como enum |
-| Constantes técnicas | `maxRetries`, `timeout` | Constantes con nombre |
+| Constantes técnicas | `maxRetries`, `timeout` | `lib/core/constants/technical.dart` (o en el archivo que las usa si son muy locales) |
 
 ---
 
