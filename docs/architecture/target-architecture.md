@@ -315,6 +315,17 @@ flowchart TB
 - Capa 3 implementa contratos de Capa 2.
 - Capa 4 es intercambiable (cambiar Postgres por otra cosa no afecta las capas de arriba).
 
+### Caso especial: dominio que solo lee de otros
+
+Algunos dominios (ej. **Asistencia**, **Reportes**) son **cross-cutting**: leen de varios dominios pero no tienen data propia.
+
+- **Tienen repositorios** (interfaz en `domain/`, implementación en `data/`) que apuntan a los repositorios de los otros dominios, NO a la BD directamente.
+- **NO tienen data propia** en la BD.
+- **NO modifican** data de otros dominios directamente. Si una recomendación lleva a una acción, la acción la dispara el dominio dueño de esa data (ej. Asistencia recomienda "subir este gasto" → Clientes recibe la orden).
+- **Exponen casos de uso** que devuelven agregados (ej. "dame contexto fiscal del último mes + perfil del usuario + recomendaciones previas") en vez de CRUD.
+
+Esto evita que Asistencia termine con su propia capa de mutación que duplica lógica de otros dominios.
+
 ---
 
 ## 6. Dominios del Negocio (agnósticos de features)
@@ -342,10 +353,23 @@ Cada dominio tiene un dueño único. Aunque hoy seas tú solo, declarar el owner
 | **Fiscal** | Hugo (Zeiki Core) | CFDIs, descarga SAT, timbrado Facturama, eFirma, cancelaciones. | Único dominio que habla con SAT y Facturama. |
 | **Clientes** | Hugo (Zeiki Core) | Alta, validación RFC, direcciones. | No accede a SAT ni Facturama. |
 | **Reportes** | Hugo (Zeiki Core) | Cálculos, dashboard, exportación. | Solo lee de otros dominios. Nunca escribe. |
-| **Asistencia** | Hugo (Zeiki Core) | LLM, recomendaciones, chat fiscal. | Solo lee; no muta datos del usuario. |
+| **Asistencia** | Hugo (Zeiki Core) | LLM, recomendaciones, chat fiscal. | Solo lee. Si una recomendación lleva a una acción, la dispara el dominio dueño de esa data. |
 | **Configuración** | Hugo (Zeiki Core) | Perfil, planes, preferencias, notificaciones. | Gobierna al usuario; no a otros dominios. |
 
 **Regla:** un dominio solo modifica SU data. Para escribir en otro dominio, publica un evento (cuando exista el Event Bus) o hace una llamada explícita al caso de uso del otro dominio (en MVP).
+
+### Aclaración sobre Asistencia y mutación
+
+Asistencia es **cross-cutting solo-lector**: lee de Reportes, Fiscal y Clientes para dar contexto al LLM. **NO escribe directamente** en ningún otro dominio.
+
+**Si Asistencia recomienda algo que requiere mutar data** (ej. "te conviene clasificar este CFDI como deducible"):
+
+1. Asistencia expone un `RecommendationEntity` con la sugerencia.
+2. La UI muestra la sugerencia al usuario.
+3. Si el usuario acepta, se dispara el caso de uso del **dominio dueño de esa data** (ej. Clientes acepta, Fiscal ejecuta).
+4. Asistencia no se entera (no se suscribe al resultado).
+
+Esto evita que Asistencia se vuelva un "dios" que muta todo.
 
 ---
 
@@ -390,11 +414,30 @@ Cada dominio tiene un dueño único. Aunque hoy seas tú solo, declarar el owner
 - **Mediano plazo (análisis, 90 días):** tabla `app_events` en Postgres con `event_type`, `payload`, `user_id`, `created_at`.
 - **Largo plazo (futuro):** servicio externo dedicado si el volumen lo justifica (no antes de Fase 4).
 
+### Logs del cliente Flutter
+
+**Hoy (MVP):** la app cliente NO envía logs al servidor automáticamente. Se loguea local con `debugPrint` en dev, y los errores visibles al usuario se reportan vía la pantalla de soporte.
+
+**Fase 2 (Observabilidad):** se introduce error tracking dedicado del cliente:
+
+- **Opción preferida:** **Sentry** (estándar de facto, free tier suficiente para MVP, soporta Flutter nativo, dashboards y alertas listos).
+- **Alternativa:** tabla `client_errors` propia, instrumentada manualmente (más trabajo, menos features out-of-the-box).
+- **Decisión:** se documenta en ADR cuando llegue Fase 2. **TBD** — no se documenta decisión que aún no se toma.
+
+Mientras tanto, los crashes que se quieran reportar se envían manualmente desde el dispositivo con `adb logcat` o equivalente.
+
 ### Cómo se consulta
 
 - **Debug en vivo:** Supabase Dashboard → Edge Function logs.
 - **Búsqueda de error:** SQL sobre `app_events` filtrando por `user_id`, `event_type`, rango de fechas.
 - **Alertas:** reglas simples sobre `app_events` (ej. "más de 10 errores 500 en 5 min").
+
+### Estándar de trazabilidad (agnóstico del proveedor)
+
+Para evitar lock-in con un proveedor de logs/trazas, la instrumentación sigue el estándar **OpenTelemetry** cuando esté disponible. Si mañana se cambia de Supabase a otra cosa, los traces sobreviven.
+
+- **Hoy:** los logs son strings con prefijos (`[sat-auto-download]`, `[auth-google-proxy]`).
+- **Fase 2:** se migra a OpenTelemetry cuando se integre Sentry (o el proveedor que se elija).
 
 ---
 
@@ -598,22 +641,24 @@ Cada decisión grande tiene un ADR en `docs/adr/ADR-XXX-<slug>.md` con el format
 
 Cosas que **se pensaron** y se decidió **no hacer** (todavía). Esto evita que dentro de seis meses alguien pregunte "¿por qué nunca consideramos X?".
 
-| Decisión diferida | Por qué se difirió | Cuándo se revisa |
-|-------------------|--------------------|--------------------|
-| **Offline mode** | Aumenta complejidad de sincronización. App no es crítica offline en MVP. | Cuando el usuario lo pida o cuando haya 100+ usuarios activos. |
-| **Sincronización incremental de CFDIs** | La descarga masiva ya cubre el caso común. | Cuando la descarga completa tarde más de 1 hora por usuario. |
-| **Push notifications** | Se puede resolver con polling en MVP. | Fase 2 (Observabilidad/Telemetría) si se justifica. |
-| **Cache distribuido (Redis)** | Postgres + cache local cubren MVP. | Cuando lleguemos a 1,000 usuarios activos (umbral de §4.1). |
-| **IA local (on-device)** | Requiere modelos cuantizados, batería, almacenamiento. El LLM server-side cubre MVP. | Si el costo de LLM server-side supera el beneficio. |
-| **Versionado de esquemas de BD** | Migraciones SQL ad-hoc bastan por ahora. | Cuando haya necesidad de rollback atómico entre versiones. |
-| **Multi-tenancy** | No es producto white-label. | Si se ofrece como servicio a otras empresas. |
-| **App iOS** | No priorizado. Android es el target. | Cuando haya usuarios iOS demandantes. |
-| **Event Bus / Kafka** | No hay múltiples consumidores todavía. | Cuando duela (umbral 50K usuarios o múltiples consumidores reales). |
-| **Microservicios** | La complejidad operativa no se justifica. | Cuando un dominio necesite escalar independientemente. |
-| **GraphQL** | REST + Edge Functions cubren el caso. | Si el tamaño de las respuestas REST se vuelve problema. |
-| **Kubernetes** | Una sola instancia cubre la carga. | Cuando el costo/beneficio de orquestación supere al de VM única. |
+| Decisión diferida | Por qué se difirió | Cuándo se revisa | Trigger activo |
+|-------------------|--------------------|--------------------|----------------|
+| **Offline mode** | Aumenta complejidad de sincronización. App no es crítica offline en MVP. | Cuando el usuario lo pida o cuando haya 100+ usuarios activos. | **Revisión:** al inicio de cada Fase, en `current-state.md` se cuenta cuántos usuarios activos hay. |
+| **Sincronización incremental de CFDIs** | La descarga masiva ya cubre el caso común. | Cuando la descarga completa tarde más de 1 hora por usuario. | **Trigger:** al implementar descarga para un usuario nuevo, medir duración. |
+| **Push notifications** | Se puede resolver con polling en MVP. | Fase 2 (Observabilidad/Telemetría) si se justifica. | **Trigger:** al llegar a Fase 2, re-evaluar. |
+| **Cache distribuido (Redis)** | Postgres + cache local cubren MVP. | Cuando lleguemos a 1,000 usuarios activos (umbral de §4.1). | **Revisión:** trimestral, contar usuarios activos. |
+| **IA local (on-device)** | Requiere modelos cuantizados, batería, almacenamiento. El LLM server-side cubre MVP. | Si el costo de LLM server-side supera el beneficio. | **Trigger:** al revisar costos mensuales de LLM. |
+| **Versionado de esquemas de BD** | Migraciones SQL ad-hoc bastan por ahora. | Cuando haya necesidad de rollback atómico entre versiones. | **Trigger:** al aparecer un bug de migración que requiera rollback. |
+| **Multi-tenancy** | No es producto white-label. | Si se ofrece como servicio a otras empresas. | **Trigger:** al evaluar caso de negocio de white-label. |
+| **App iOS** | No priorizado. Android es el target. | Cuando haya usuarios iOS demandantes. | **Trigger:** al detectar demanda en métricas de soporte. |
+| **Event Bus / Kafka** | No hay múltiples consumidores todavía. | Cuando duela (umbral 50K usuarios o múltiples consumidores reales). | **Revisión:** trimestral, contar consumers reales. |
+| **Microservicios** | La complejidad operativa no se justifica. | Cuando un dominio necesite escalar independientemente. | **Trigger:** al detectar que un dominio tiene latencia por carga. |
+| **GraphQL** | REST + Edge Functions cubren el caso. | Si el tamaño de las respuestas REST se vuelve problema. | **Trigger:** al medir respuestas > 100KB o > 50ms serialización. |
+| **Kubernetes** | Una sola instancia cubre la carga. | Cuando el costo/beneficio de orquestación supere al de VM única. | **Trigger:** al evaluar auto-scaling real. |
 
-**Regla:** una decisión diferida no se reconsidera "porque sí". Se reconsidera cuando se cumple la condición de revisión (umbral, tiempo, evidencia).
+**Regla:** una decisión diferida no se reconsidera "porque sí". Se reconsidera cuando se cumple la condición de revisión o el trigger activo dispara.
+
+**Proceso de revisión activa:** al inicio de cada cleanup de HDU, Mavis (o el orquestador de turno) revisa las decisiones diferidas y verifica si algún trigger se cumplió. Si sí, se abre issue o HDU nueva para abordar.
 
 ---
 
