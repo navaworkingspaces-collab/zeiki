@@ -530,56 +530,36 @@ La arquitectura no termina cuando `flutter build` compila. También incluye cóm
 
 ## 13. ADRs (Architecture Decision Records)
 
-Cada decisión grande tiene un ADR con este formato: **Decisión / Por qué / Trade-offs / Cuándo se revisa.**
+Cada decisión grande tiene un ADR en `docs/adr/ADR-XXX-<slug>.md` con el formato: **Contexto / Decisión / Por qué / Alternativas consideradas / Trade-offs / Cuándo se revisa.**
 
-### ADR-001: Flutter como cliente
+**Índice de ADRs vigentes:**
 
-- **Decisión:** toda la UI se construye en Flutter (no React Native, no nativo).
-- **Por qué:** un solo codebase para Android (target principal). Productividad de Dart. Ecosistema de paquetes suficiente.
-- **Trade-offs:** iOS no priorizado (aceptable para MVP). Renderización vs nativo (no relevante para app de formularios).
-- **Revisar cuando:** se vuelva crítico soportar iOS, o se necesite UI muy específica de plataforma.
+| # | Título | Archivo | Estado |
+|---|--------|---------|--------|
+| 001 | Clean Architecture | [docs/adr/ADR-001-clean-architecture.md](../adr/ADR-001-clean-architecture.md) | Aceptado |
+| 002 | Flutter como cliente | [docs/adr/ADR-002-flutter.md](../adr/ADR-002-flutter.md) | Aceptado |
+| 003 | Supabase como backend | [docs/adr/ADR-003-supabase.md](../adr/ADR-003-supabase.md) | Aceptado |
+| 004 | BLoC para state management | [docs/adr/ADR-004-bloc.md](../adr/ADR-004-bloc.md) | Aceptado |
+| 005 | GetIt para DI | [docs/adr/ADR-005-getit.md](../adr/ADR-005-getit.md) | Aceptado |
+| 006 | Code Magic + Firebase para CI/CD | [docs/adr/ADR-006-codemagic-firebase.md](../adr/ADR-006-codemagic-firebase.md) | Aceptado |
+| 007 | Deno + TS para Edge Functions | [docs/adr/ADR-007-deno-edge-functions.md](../adr/ADR-007-deno-edge-functions.md) | Aceptado |
+| 008 | Estructura de dominios | [docs/adr/ADR-008-domain-structure.md](../adr/ADR-008-domain-structure.md) | Aceptado |
+| 009 | Reescritura desde cero | [docs/adr/ADR-009-rewrite-with-knowledge-reuse.md](../adr/ADR-009-rewrite-with-knowledge-reuse.md) | Aceptado |
 
-### ADR-002: Supabase como backend
+**Cómo se agregan nuevos ADRs:**
 
-- **Decisión:** Supabase para Auth, Postgres, Edge Functions y Storage.
-- **Por qué:** Postgres gestionado + Auth incluido + Edge Functions para lógica serverless. Reduce infra a operar.
-- **Trade-offs:** vendor lock-in (mitigado por Postgres estándar). Tope de 150s en Edge Functions (mitigado con async pattern + crons).
-- **Revisar cuando:** los costos escalen de forma no lineal, o se necesite infra on-premise.
+1. Copiar la plantilla de un ADR existente.
+2. Numerar correlativamente (siguiente número disponible).
+3. Discusión: si la decisión es controversial, abrir issue con `RFC:` en el título antes de escribir el ADR.
+4. Commit con prefijo `docs(adr): add ADR-XXX-<slug>`.
+5. Actualizar la tabla de arriba.
+6. Si el ADR **reemplaza** uno anterior (decisión revertida), el ADR viejo se mueve a `docs/adr/deprecated/` con nota del reemplazo.
 
-### ADR-003: Clean Architecture por feature/dominio
+**Cuándo un ADR se considera deprecated:**
 
-- **Decisión:** cada feature/dominio sigue data / domain / presentation.
-- **Por qué:** testabilidad, mantenibilidad, reemplazo de piezas sin tocar el resto.
-- **Trade-offs:** más archivos y más capas para features simples (aceptable).
-- **Revisar cuando:** N/A (decisión estructural, no se revisa salvo que la arquitectura cambie drásticamente).
-
-### ADR-004: BLoC para state management
-
-- **Decisión:** `flutter_bloc` para todo estado no trivial.
-- **Por qué:** patrón explícito (event → state), testeable con `bloc_test`, separación de UI y lógica.
-- **Trade-offs:** curva de aprendizaje (aceptable), boilerplate para pantallas simples (aceptable).
-- **Revisar cuando:** N/A.
-
-### ADR-005: Edge Functions (Deno) para lógica async server-side
-
-- **Decisión:** Deno + TypeScript para Edge Functions.
-- **Por qué:** mismo lenguaje que el cliente (TS vs Dart, similar), ecosistema estándar, deploy simple.
-- **Trade-offs:** tope de 150s por invocación (mitigado con patrón async + crons).
-- **Revisar cuando:** se necesite workers con tiempo ilimitado (Fase 4 o 5).
-
-### ADR-006: Esta estructura de dominios
-
-- **Decisión:** los 6 dominios definidos en §6 (Identidad, Fiscal, Clientes, Reportes, Asistencia, Configuración).
-- **Por qué:** refleja las áreas naturales del problema de facturación CFDI 4.0. Suficientemente granulares para que cada uno quepa en la cabeza de un dev.
-- **Trade-offs:** si un dominio crece demasiado, se divide (ej. "Fiscal" en "Descarga", "Timbrado", "Firma").
-- **Revisar cuando:** un dominio supere 15 archivos en `domain/` o se vuelva claro que dos áreas no comparten reglas.
-
-### ADR-007: Reescritura desde cero, con reutilización de conocimiento
-
-- **Decisión:** no existe el objetivo de migrar código existente. El código previo se conserva únicamente como referencia para comprender reglas de negocio, algoritmos o integraciones cuando resulte útil.
-- **Por qué:** la deuda técnica acumulada hace más rápida la reescritura que la mejora incremental. App sin clientes en producción elimina el riesgo del "valle". Reutilizar conocimiento (un algoritmo, una integración validada) no es lo mismo que arrastrar deuda.
-- **Trade-offs:** se requiere disciplina para distinguir "reutilizar lo bueno" de "arrastrar lo malo". Toda reutilización se documenta con la razón.
-- **Revisar cuando:** N/A (ya se ejecutó).
+- La decisión ya no aplica (cambio de stack, de proveedor, de escala).
+- Se creó un ADR nuevo que contradice al anterior.
+- La decisión se revirtió por evidencia.
 
 ---
 
