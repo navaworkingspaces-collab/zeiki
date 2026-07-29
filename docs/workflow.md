@@ -1,20 +1,23 @@
-# Workflow de desarrollo — Zeiki v2
+# Workflow de desarrollo — Zeiki
 
-> **Protocolo de trabajo alineado con la [Target Architecture](architecture/target-architecture.md).** Cada cambio (bug, feature, refactor, chore) sigue este flujo.
+> **Cómo se trabaja en Zeiki.** Este documento es operacional: el "cómo". Las convenciones (qué debe cumplir el código) viven en `conventions.md`. Los comandos y CI/CD viven en `git.md`. Si este workflow cambia, se actualiza aquí.
 >
-> **Última actualización:** 2026-07-29 (v2 — feedback de Hugo: check de entendimiento, fuera de scope, estados de espera, quema de legacy, migración selectiva)
+> **Última actualización:** 2026-07-29 (v3 — separar de git, Definition of Done, Code Review, deuda técnica, NO INFERENCIA arriba)
 
 ---
 
-## 🎯 Filosofía
+## 🧭 Filosofía
+
+> **NO INFERENCIA, SOLO PRUEBAS** (filosofía del proyecto, no solo de debugging)
+>
+> Nunca digas "probablemente pasa X" sin evidencia. Cita el código exacto: archivo, línea, método. Si no puedes demostrarlo, es hipótesis, no conclusión. Aplica a debugging, code review, debates técnicos, todo.
 
 1. **Planos antes de código:** toda HDU que toque estructura, dominio o sistema externo arranca con un spec chiquito aprobado por Hugo.
 2. **Test primero, código después:** TDD estricto para flujos críticos.
-3. **No inferencia, solo pruebas:** cuando se debuggea, se cita código con archivo:línea.
-4. **Sin scope creep:** lo que no está en el spec no se hace; si aparece algo, se registra como HDU nueva.
-5. **Calidad de verdad, no métricas de vanidad:** testing basado en matriz de criticidad, no en porcentajes.
-6. **Quema la deuda cuando la veas:** archivos legacy, rutas hardcoded, anti-patrones — se limpian, no se acumulan.
-7. **Migración selectiva:** del repo anterior se trae solo conocimiento (algoritmos, integraciones), no deuda.
+3. **Sin scope creep:** lo que no está en el spec no se hace. Si aparece algo, se registra como HDU nueva.
+4. **Calidad de verdad, no métricas de vanidad:** testing basado en matriz de criticidad, no en porcentajes.
+5. **Quema la deuda cuando la veas:** archivos legacy, anti-patrones, inconsistencias — se limpian, no se acumulan.
+6. **Migración selectiva:** del repo anterior se trae conocimiento, no deuda.
 
 ---
 
@@ -49,48 +52,37 @@ Esto NO se va a hacer: <1 línea, fuera de scope explícito>
 **Quién:** Mavis.
 **Cuándo:** apenas se identifica una HDU, antes del triage.
 
-**Pregunta clave:** ¿esta HDU toca un sistema externo?
+**Pregunta clave:** ¿esta HDU toca un sistema externo? (SAT, PACs, APIs de terceros, BD fuera del proyecto, cualquier sistema cuyo contrato no controlamos).
 
-**Sistemas externos incluyen:** SAT, PACs de facturación, APIs de terceros, BD fuera del proyecto, cualquier sistema cuyo contrato no controlamos.
+**Si SÍ:** crear `HDU-EXPLORE-NNN` previa con research + pruebas con credenciales reales. Reporte en `docs/research/`. Sin exploración NO se implementa.
 
-**Si SÍ toca sistema externo:**
-1. Crear `HDU-EXPLORE-NNN` previa (research, no implementación).
-2. El agente investiga con docs oficiales + pruebas con credenciales reales.
-3. Entrega reporte en `docs/research/YYYY-MM-DD-<topic>.md`.
-4. La HDU de implementación refina su spec basándose en el reporte.
-5. **Sin la exploración, NO se implementa.**
-
-**Si NO toca sistema externo (trabajo interno):** proceder al Paso 1.
+**Si NO:** proceder al Paso 1.
 
 **En la spec de CADA HDU declarar:** `Sistemas externos involucrados: SAT (WebService X) / Facturama / Ninguno`.
 
 ---
 
-### 1. TRIAGE — Clasificar y priorizar
+### 1. TRIAGE
 
 **Quién:** Mavis.
-**Cuándo:** apenas Hugo reporta algo o se detecta una mejora.
 
 **Output:**
-- Folio `HDU-XXX` (siguiente número disponible en `.mavis/hdu.md`).
-- Clasificación: `bug` | `feature` | `refactor` | `chore`.
+- Folio `HDU-XXX`.
+- Tipo: `bug` | `feature` | `refactor` | `chore`.
 - Prioridad: `alta` | `media` | `baja`.
 - **Estado:** `pendiente` | `en_progreso` | `en_espera_input` | `completado` | `cancelado`.
 
-> **Nota sobre `en_espera_input`:** es un estado válido. Una HDU se queda en `en_espera_input` cuando necesita input externo (Hugo, un proveedor, evidencia) que no se puede generar ahora. No se considera "olvidada" ni "rota". Se revisa en el snapshot de current-state.
-
-**Acción:** agregar entrada en `.mavis/hdu.md` con folio, título, link al spec.
+> **`en_espera_input`:** estado válido. Una HDU se queda aquí cuando necesita input externo (Hugo, un proveedor, evidencia) que no se puede generar ahora. No es "olvidada". Se revisa en el snapshot de current-state.
 
 ---
 
-### 2. SPEC — Documentar el problema y la solución
+### 2. SPEC
 
 **Quién:** Mavis redacta, Hugo aprueba.
-**Cuándo:** después del check de entendimiento y el triage, antes de tocar código.
 
 **Archivo:** `specs/HDU-XXX-slug.md`.
 
-**Plantilla del spec (OBLIGATORIA, no se omite ninguna sección):**
+**Plantilla OBLIGATORIA** (no se omite ninguna sección):
 
 ```markdown
 # HDU-XXX — Título corto
@@ -135,28 +127,24 @@ Esto NO se va a hacer: <1 línea, fuera de scope explícito>
 - …
 
 ## Review checklist
-- [ ] Cumple con §1-§3 de Target Architecture (principios, atributos, restricciones)
+- [ ] Cumple con §1-§3 de Target Architecture
 - [ ] No introduce anti-patrones (§14 de Target Architecture)
-- [ ] Clean code: …
-- [ ] Security: …
+- [ ] Clean code (ver §Code Review abajo)
+- [ ] Security (ver conventions §6)
 - [ ] Tests pasan
 - [ ] Pipeline completo pasa
-- [ ] QA local con flutter run
+- [ ] QA local
 
 ## Notas
-Links, referencias, contexto adicional.
 ```
 
-**Acción:** crear spec, linkearlo desde `.mavis/hdu.md`. Hugo debe aprobar el spec completo antes del paso 4.
+Hugo debe aprobar el spec completo antes del paso 4.
 
 ---
 
-### 3. BRANCH — Rama dedicada
+### 3. BRANCH
 
 **Quién:** Mavis.
-**Cuándo:** spec listo y aprobado.
-
-**Convención:**
 
 | Tipo | Formato |
 |------|---------|
@@ -166,128 +154,93 @@ Links, referencias, contexto adicional.
 | Chore | `chore/hdu-XXX-slug` |
 | Hotfix | `hotfix/hdu-XXX-slug` |
 
-**Comandos:**
-
-```powershell
-git checkout main
-git pull origin main
-git checkout -b fix/hdu-XXX-slug
-```
-
-**Regla:** nunca trabajar directo en `main`.
+Nunca trabajar directo en `main`.
 
 ---
 
-### 4. TEST RED — Escribir tests que fallen
+### 4. TEST RED
 
-**Quién:** agente `seiki-tester` o sesión dedicada.
-**Cuándo:** después de crear la rama.
+**Quién:** seiki-tester o sesión dedicada.
 
-**Objetivo:** escribir tests que **deben fallar** antes de implementar. Esto valida que el test detecta el problema.
+Escribir tests que **deben fallar** antes de implementar. Para bugs: reproducen el bug. Para features: validan el comportamiento esperado.
 
-- **Bugs:** tests que reproducen el bug.
-- **Features:** tests que validan el comportamiento esperado.
+`flutter test test/path/to/new_test.dart` debe mostrar FAILED.
 
-**Verificación:** `flutter test test/path/to/new_test.dart` debe mostrar FAILED.
-
-**Para flows críticos** (matriz §11 de Target Architecture): tests más exhaustivos. Para flows de criticidad baja: smoke test mínimo.
+**Para flujos críticos** (matriz §11 de Target Architecture): tests exhaustivos. Para criticidad baja: smoke test mínimo.
 
 ---
 
-### 5. IMPLEMENT — Escribir el código
+### 5. IMPLEMENT
 
-**Quién:** agente `seiki-implementer` o sesión dedicada.
-**Cuándo:** tests rojos confirmados.
+**Quién:** seiki-implementer o sesión dedicada.
 
-**Reglas:**
 - Código mínimo para pasar los tests.
-- **NO** features extra (scope creep).
-- **NO** refactorizar código no relacionado.
-- Respetar convenciones de `docs/conventions.md`.
-- Respetar arquitectura de `docs/architecture/target-architecture.md`.
-- Si se reusa código del proyecto anterior, documentar con el porqué.
-
-**Output:** código en los archivos listados en el spec.
+- NO features extra. NO refactors no relacionados.
+- Respetar `conventions.md` y `target-architecture.md`.
+- Si se reusa código del proyecto anterior, documentar el porqué.
 
 ---
 
-### 6. TEST GREEN — Validar que ahora pasan
+### 6. TEST GREEN
 
-**Quién:** agente `seiki-tester` o sesión dedicada.
-
-```powershell
-flutter test test/path/to/new_test.dart
-flutter test
-```
-
-**Criterio:** todos los tests pasan. Si alguno falla, volver al paso 5.
+Todos los tests pasan. Si falla alguno, volver al paso 5.
 
 ---
 
-### 7. REVIEW — Clean code + Security + Architecture
+### 7. REVIEW
 
-**Quién:** agente `seiki-reviewer` o sesión dedicada.
+**Quién:** seiki-reviewer o sesión dedicada.
 
-**Gate 1 — Clean code:** nombres, funciones con una responsabilidad, sin código muerto, sin `print()`, sin magic numbers, sin duplicación, sin TODOs sin issue.
+**Code Review (qué se busca, qué NO):**
 
-**Gate 2 — Security:** sin secrets hardcoded, inputs validados, auth checks, HTTPS, sin logs de datos sensibles, almacenamiento seguro.
+✅ **Se busca:**
+- **Bugs** reales o latentes.
+- **Riesgos** (memory leaks, race conditions, validaciones faltantes).
+- **Complejidad** innecesaria (funciones grandes, abstracciones prematuras).
+- **Legibilidad** (nombres, comentarios, organización).
+- **Cumplimiento** de Target Architecture y conventions.
 
-**Gate 3 — Architecture (NUEVO en v2):** verificar contra la Target Architecture:
-- Cumple con los principios arquitectónicos (§1).
-- No viola ninguna restricción (§3).
-- No introduce anti-patrones nuevos (§14). Si encuentra uno recurrente, agregarlo.
-- Los ADRs vigentes se respetan; si se propone romper uno, se crea un ADR-XXX nuevo en la misma PR.
+❌ **NO se busca:**
+- Gustos personales (estilo de código, naming bikeshedding).
+- Refactors no relacionados.
+- Cambios fuera del scope del spec.
 
-**Output:** checklist firmado en el spec, sección "Review checklist".
+> **Regla:** si el review encuentra algo fuera del scope, se levanta como HDU nueva, no se arregla en este PR.
 
----
+**Tres gates:**
 
-### 8. PIPELINE — Suite completa + verify
-
-**Quién:** agente `seiki-pipeline-runner` o sesión dedicada.
-
-**Comandos obligatorios:**
-
-**Flutter (cliente):**
-```powershell
-flutter analyze
-flutter test
-flutter build apk --debug
-```
-
-**Deno (edge functions) — TODAS, no solo las tocadas en esta HDU:**
-```powershell
-foreach ($fn in Get-ChildItem "supabase/functions") {
-  Push-Location $fn
-  deno check index.ts
-  deno test --allow-read --allow-env
-  Pop-Location
-}
-```
-
-**Si hay migraciones SQL nuevas:** aplicar a staging, verificar idempotencia.
-
-**Criterio:** TODO pasa 0 errores. Si falla, NO se commitea.
+- **Gate 1 — Clean code:** nombres, funciones con una responsabilidad, sin código muerto, sin magic numbers, sin duplicación, sin TODOs sin issue.
+- **Gate 2 — Security:** sin secrets hardcoded, inputs validados, auth checks, sin logs de datos sensibles, almacenamiento seguro.
+- **Gate 3 — Architecture (NUEVO en v3):** verificar contra la Target Architecture:
+  - Cumple con los principios arquitectónicos (§1).
+  - No viola ninguna restricción (§3).
+  - No introduce anti-patrones nuevos (§14). Si encuentra uno recurrente, agregarlo.
+  - Los ADRs vigentes se respetan; si se propone romper uno, se crea un ADR-XXX nuevo en la misma PR.
 
 ---
 
-### 9. LOCAL QA — Probar en dispositivo real
+### 8. PIPELINE
+
+**Quién:** seiki-pipeline-runner o sesión dedicada.
+
+Comandos específicos del stack viven en `docs/git.md`. Aquí solo el contrato: **TODO debe pasar 0 errores antes de commitear.**
+
+---
+
+### 9. LOCAL QA
 
 **Quién:** Hugo.
-**Cuándo:** pipeline pasa.
 
-1. `flutter run` en Xiaomi.
+1. Probar en dispositivo real.
 2. Verificar **todos** los criterios de aceptación del spec.
-3. Probar edge cases (sin internet, con datos vacíos).
+3. Probar edge cases.
 4. Capturar logs si algo falla.
-
-**Output:** AC marcados o reporte de qué falló.
 
 ---
 
-### 10. COMMIT — Versionar el cambio
+### 10. COMMIT
 
-**Convención:** ver `docs/conventions.md §3`.
+Convención completa en `docs/conventions.md §1` y en `docs/git.md`. Resumen:
 
 ```
 <tipo>(<scope>): <descripción corta> [HDU-XXX]
@@ -299,108 +252,117 @@ Refs: specs/HDU-XXX-slug.md
 
 ---
 
-### 11. PR — Pull Request
+### 11. PR
 
-**Quién:** Mavis.
-**Cuándo:** commit listo.
-
-```powershell
-git push origin <rama>
-gh pr create --base main --title "<tipo>(<scope>): <descripción> [HDU-XXX]" --body "..."
-```
-
-**Template de PR:** ver `docs/conventions.md §4`.
+Template y proceso en `docs/git.md`. Resumen: descripción + check de entendimiento + checklist.
 
 ---
 
-### 12. CLEANUP — Cerrar el ciclo
-
-**Quién:** Mavis.
-**Cuándo:** PR mergeado.
+### 12. CLEANUP
 
 1. **Merge a main** (`--no-ff`).
 2. **Eliminar rama** (local + remoto).
 3. **Actualizar `.mavis/hdu.md`:** estado, fecha de cierre, link al PR.
 4. **Actualizar `docs/current-state.md`:** marcar la HDU en su nueva sección.
-5. **Actualizar `docs/architecture/target-architecture.md` si aplica:**
-   - Si cambió arquitectura → nuevo ADR.
-   - Si descubrió anti-patrón nuevo → agregar a §14.
-   - Si se difirió una decisión → agregar a §13.1.
-6. **Migración selectiva (NUEVO en v2):** si la HDU aporta algo que vale la pena preservar del repo anterior, copiar a `docs/handoffs/` o `docs/features/`. Decisión documentada.
-7. **Quema de archivos legacy (NUEVO en v2):** si la HDU dejó archivos obsoletos (código viejo, specs canceladas, docs que ya no aplican), quemarlos según el procedimiento abajo.
+5. **Actualizar `target-architecture.md` si aplica:** nuevo ADR, anti-patrón nuevo, decisión diferida.
+6. **Migración selectiva** (si aplica): traer del repo anterior lo que valga la pena.
+7. **Quema de archivos legacy** (si aplica): limpiar lo que quedó obsoleto.
 8. **Notificar a Hugo:** resumen de qué se hizo, links, follow-ups.
+
+---
+
+## ✅ Definition of Done (DoD)
+
+Una HDU está **terminada** cuando se cumplen TODAS estas condiciones. Cualquier excepción se documenta con razón.
+
+- [ ] Cumple los criterios de aceptación del spec (verificados en QA local).
+- [ ] Tests escritos y pasando (al menos los definidos en la spec).
+- [ ] Tests de regression incluidos si la HDU arregla un bug.
+- [ ] `flutter analyze` sin warnings nuevos (los warnings preexistentes justificados siguen OK).
+- [ ] Pipeline completo pasa (ver `docs/git.md`).
+- [ ] Code review aprobado (3 gates: clean code, security, architecture).
+- [ ] PR mergeado a `main` con `--no-ff`.
+- [ ] Rama eliminada (local y remoto).
+- [ ] `hdu.md` actualizado con estado y link.
+- [ ] `current-state.md` actualizado.
+- [ ] `target-architecture.md` actualizado si hubo cambio estructural.
+- [ ] Migración selectiva hecha (si aplica).
+- [ ] Quema de legacy hecha (si aplica).
+- [ ] Hugo notificado con resumen + links.
+
+**Si una DoD no se cumple:** la HDU vuelve a `en_progreso` y se asigna a quien pueda cerrarla.
+
+---
+
+## 💸 Deuda técnica
+
+> **Regla v3 (NUEVO):** la deuda escondida nunca desaparece. Si se introduce, se documenta. Sin excepciones.
+
+### Cuándo se introduce deuda
+
+- Decisión consciente para salir de un bloqueo ("lo arreglo bien en la siguiente HDU").
+- Workaround conocido para un bug de un proveedor externo.
+- Migración parcial de una pieza que se completará después.
+
+### Cómo se documenta
+
+- **Issue o HDU** que la paga: `Deuda pagada por: HDU-XXX` o `Issue #N`.
+- **Fecha de creación** de la deuda.
+- **Justificación** de por qué se introdujo (1-2 líneas).
+- **Costo estimado** de pagarla (cuándo se vuelve insoportable).
+
+**Dónde:**
+
+- Comentario en el código con el formato `// DEBT(hdu-XXX, YYYY-MM-DD): descripción. Pagada por HDU-YYY.`
+- Entrada en `.mavis/technical-debt.md` (catálogo global).
+- Mención en el PR que la introduce.
+
+### Revisión periódica
+
+- En el cleanup de cada HDU, revisar si la HDU cierra deudas pendientes.
+- En el snapshot de `current-state.md`, listar las 5 deudas más viejas o más costosas.
 
 ---
 
 ## 🔄 Migración selectiva (del repo anterior al nuevo)
 
-**Cuándo se hace:** durante el cleanup de cualquier HDU que toque una feature migrada.
+**Cuándo:** durante el cleanup de cualquier HDU que toque una feature migrada.
 
-**Qué se trae del repo anterior:**
+**Qué se trae:**
 
-- ✅ Handoffs con contexto histórico valioso (`docs/handoffs/YYYY-MM-DD-hdu-XXX-*.md` que documenten decisiones o bugs que vale recordar).
+- ✅ Handoffs con contexto histórico valioso.
 - ✅ Lecciones aprendidas que sigan vigentes.
-- ✅ Algoritmos, validaciones o integraciones validadas (citando el archivo:línea original).
-- ✅ Specs cerradas que documenten reglas de negocio que no están en el código nuevo todavía.
+- ✅ Algoritmos, validaciones o integraciones validadas (citando origen).
+- ✅ Specs cerradas que documenten reglas de negocio.
 
 **Qué NO se trae:**
 
-- ❌ Código de la app (ya está reescrito en el nuevo).
-- ❌ Tests viejos (se reescriben con el código).
-- ❌ Deuda técnica (es la razón de la reescritura).
+- ❌ Código de la app (ya está reescrito).
+- ❌ Tests viejos.
+- ❌ Deuda técnica.
 - ❌ Archivos que ya no apliquen.
 
 **Procedimiento:**
 
-1. Hugo (o Mavis en sesión con Hugo) decide caso por caso.
-2. Se copia al nuevo repo con un header que cita el origen: `> Migrado de navaworkingspaces-collab/seiki_app@<commit> en YYYY-MM-DD.`
-3. Si el contenido entra en conflicto con la Target Architecture, gana la Target Architecture.
+1. Decisión caso por caso (Hugo + Mavis).
+2. Copia al nuevo repo con header: `> Migrado de navaworkingspaces-collab/seiki_app@<commit> en YYYY-MM-DD.`
+3. Si entra en conflicto con Target Architecture, gana Target Architecture.
 
 ---
 
 ## 🗑️ Quema de archivos legacy
 
-**Cuándo se hace:** durante el cleanup, o cuando se detecta un archivo obsoleto.
+**Cuándo:** durante cleanup, o cuando se detecta un archivo obsoleto.
 
 **Procedimiento:**
 
-1. **Detectar:** archivo sin uso por 6+ meses, o que ya no esté en ningún spec, o reemplazado por algo en la Target Architecture.
+1. **Detectar:** archivo sin uso por 6+ meses, o que no esté en ningún spec, o reemplazado.
 2. **Verificar:** confirmar que no hay tests o specs que lo referencien.
-3. **Decidir:** ¿se conserva en `docs/archive/YYYY-MM-DD-<filename>` para referencia histórica, o se borra directo?
-4. **Ejecutar:** commit dedicado con mensaje `chore(cleanup): archive <archivo> (legacy sin uso)`.
+3. **Decidir:** ¿se conserva en `docs/archive/YYYY-MM-DD-<filename>` o se borra directo?
+4. **Ejecutar:** commit `chore(cleanup): archive <archivo> (legacy sin uso)`.
 5. **Documentar:** si se conserva en archive/, agregar índice en `docs/archive/README.md`.
 
-**Regla:** no acumular archivos "por si acaso". Si lleva 6 meses sin uso y no está referenciado, se quema.
-
----
-
-## 🐛 Regla de debug: NO INFERENCIA, SOLO PRUEBAS
-
-**Cuando se debuggea un bug (paso 4-5 del workflow):**
-
-- ❌ NUNCA decir "probablemente pasa X" sin evidencia.
-- ✅ SIEMPRE citar código: `archivo:línea`, método, snippet.
-- ✅ Si no puedes demostrar algo, marcarlo como "hipótesis a verificar".
-
-**Template de reporte de bug:**
-
-```
-🐛 SÍNTOMA
-- Usuario reporta: <lo que ve/pasa>
-
-🔍 CÓDIGO INVOLUCRADO (con citas)
-- archivo:línea — <qué hace>
-- archivo:línea — <qué hace>
-
-🧪 EVIDENCIA
-- Test/log/output que confirma
-
-💡 HIPÓTESIS (si aplica)
-- "Podría ser X si pasa Y" — cómo verificar
-
-🎯 FIX PROPUESTO
-- archivo:línea — cambiar <X> por <Y>
-```
+**Regla:** no acumular "por si acaso". Si lleva 6 meses sin uso y no está referenciado, se quema.
 
 ---
 
@@ -416,43 +378,27 @@ gh pr create --base main --title "<tipo>(<scope>): <descripción> [HDU-XXX]" --b
 
 ### Cambios triviales (typo, comentario, etc.)
 
-- ✅ Triage
-- ✅ Branch
-- ⚠️ Tests (solo si cambia comportamiento público)
-- ✅ Implement
-- ✅ Review
-- ⚠️ Pipeline (lite — solo `flutter analyze`)
-- ⚠️ QA local (smoke test)
-- ✅ Commit + PR + Cleanup
+- ✅ Triage, branch, implement, review, commit, PR, cleanup.
+- ⚠️ Tests: solo si cambia comportamiento público.
+- ⚠️ Pipeline: lite (solo analyzer).
+- ⚠️ QA: smoke test.
 
 ### Cambios solo de docs
 
-Cambios a `docs/`, `target-architecture.md`, este workflow no requieren tests ni pipeline, pero sí commit + push.
+Cambios a `docs/`, `target-architecture.md`, este workflow, `conventions.md`, `git.md` no requieren tests ni pipeline, pero sí commit + push.
 
 ---
 
 ## 🤖 Para los agentes
 
-Cuando un agente (implementer, tester, reviewer, pipeline-runner) es invocado por este workflow:
+Cuando un agente es invocado por este workflow:
 
 1. **Leer el spec completo** antes de actuar.
-2. **Devolver el check de entendimiento** (1-2 oraciones de lo que entendiste). Si no coincide con el spec, pararte.
+2. **Devolver el check de entendimiento** (1-2 oraciones). Si no coincide, pararte.
 3. **Seguir `target-architecture.md` y `conventions.md`.**
 4. **Reportar al orquestador (Mavis)** con resumen estructurado.
-5. **Nunca scope creep.** Si encuentras algo fuera de scope, registrarlo como HDU nuevo pero no tocarlo.
-6. **Respetar la matriz de criticidad** de §11 de Target Architecture para decidir qué tests son obligatorios y cuáles opcionales.
-
----
-
-## 📊 Métricas (opcionales, no de vanidad)
-
-Por cada HDU completado, registrar en el PR:
-
-- Tiempo total (triage → cleanup).
-- Número de commits.
-- Líneas de código agregadas/eliminadas.
-
-**NO se mide:** porcentaje de coverage (es engañoso), número de tests (puede inflarse con tests inútiles).
+5. **Nunca scope creep.** Lo que esté fuera, HDU nueva.
+6. **Respetar la matriz de criticidad** para decidir tests obligatorios vs opcionales.
 
 ---
 

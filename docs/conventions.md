@@ -1,461 +1,224 @@
-# Convenciones — Zeiki v2
+# Convenciones — Zeiki
 
-> **Reglas de código, naming, commits y PRs.** Cualquier contribución debe seguirlas. Alineado con la [Target Architecture](architecture/target-architecture.md).
+> **Reglas permanentes del proyecto.** Este documento describe **qué** debe cumplir el código, no **cómo** se hace. El "cómo" vive en `workflow.md` y `git.md`. Si las convenciones cambian, este archivo cambia poco; si el stack cambia, este archivo no se reescribe.
 >
-> **Última actualización:** 2026-07-29 (v2 — testing basado en matriz de criticidad, no en porcentajes)
+> **Última actualización:** 2026-07-29 (v3 — separar reglas de procesos, abstraer del stack, agregar "Preferimos")
+
+---
+
+## 🧭 Filosofía
+
+### NO INFERENCIA, SOLO PRUEBAS (filosofía del proyecto, no solo de debugging)
+
+> **Nunca digas "probablemente pasa X" o "debe ser Y" sin evidencia.** Cita el código exacto: archivo, línea, método, snippet. Si no puedes demostrarlo, márcalo como hipótesis explícita con su plan de verificación.
+>
+> Aplica a debugging, code review, debates técnicos, reportes a Hugo, todo.
+
+**Por qué:** la inferencia lleva a fixes incorrectos, erosiona confianza, y bloquea que las sesiones futuras verifiquen claims. Los equipos de infraestructura grandes arreglan evidencia, no hipótesis.
+
+---
+
+## 💚 Preferimos
+
+Decisiones por defecto cuando hay empate. Documentan la jerarquía de valores del proyecto.
+
+```
+Código simple
+  sobre
+Código inteligente.
+```
+
+```
+Funciones pequeñas
+  sobre
+Métodos de 400 líneas.
+```
+
+```
+Duplicar 10 líneas
+  sobre
+Crear una abstracción innecesaria.
+```
+
+```
+Legibilidad
+  sobre
+Micro optimización.
+```
+
+```
+Estructura explícita
+  sobre
+Magia implícita.
+```
+
+```
+Un test que falla y se arregla
+  sobre
+Diez tests que pasan sin probar nada.
+```
+
+```
+Documentar el porqué
+  sobre
+Documentar el qué.
+```
 
 ---
 
 ## 1. Naming
 
-### Archivos y carpetas
-
 | Tipo | Convención | Ejemplo |
 |------|-----------|--------|
 | Carpetas | `snake_case`, en inglés | `auth/`, `sat_configuration/` |
-| Archivos Dart | `snake_case.dart` | `login_page.dart`, `auth_bloc.dart` |
-| Archivos de test | `<archivo>_test.dart` | `auth_bloc_test.dart` |
+| Archivos de código | `snake_case.<ext>` | `login_page.dart`, `auth_service.ts` |
+| Archivos de test | `<archivo>_test.<ext>` | `auth_bloc_test.dart` |
 | Specs | `HDU-XXX-slug-descriptivo.md` | `HDU-005-onboarding-flag.md` |
 | Handoffs | `docs/handoffs/YYYY-MM-DD-hdu-XXX-slug.md` | `docs/handoffs/2026-07-27-hdu-021c.md` |
 | Docs de features | `docs/features/<nombre-feature>.md` | `docs/features/sat-download.md` |
 
-### Clases y tipos
-
 | Tipo | Convención | Ejemplo |
 |------|-----------|--------|
-| Clases | `PascalCase` | `LoginPage`, `AuthBloc` |
+| Clases / tipos | `PascalCase` | `LoginPage`, `AuthBloc` |
 | Enums | `PascalCase` | `AuthStatus` |
 | Extensiones | `PascalCase` + sufijo | `StringExtensions` |
-| Typedefs | `PascalCase` + sufijo | `AuthCallback` |
-
-### Variables y funciones
-
-| Tipo | Convención | Ejemplo |
-|------|-----------|--------|
-| Variables locales | `camelCase` | `currentUser` |
-| Variables privadas | `_camelCase` | `_isLoading` |
+| Variables | `camelCase` (privadas con `_` prefix) | `currentUser`, `_isLoading` |
+| Funciones | `camelCase`, verbos | `signIn()`, `_handleLogin()` |
 | Constantes | `camelCase` con `const` | `const maxRetries = 3;` |
-| Funciones | `camelCase`, verbos | `signIn()`, `getCurrentUser()` |
-| Funciones privadas | `_camelCase` | `_handleLogin()` |
-| Getters | `camelCase`, sin `get` prefix | `displayName` |
+| Variables de entorno | `SCREAMING_SNAKE_CASE` | `SUPABASE_URL` |
 
-### BLoC
+**Reglas transversales:**
 
-| Elemento | Convención | Ejemplo |
-|----------|-----------|--------|
-| Events | `PascalCase` + sufijo o sustantivo | `AuthSignInWithEmailRequested` |
-| States | `PascalCase` + sufijo o adjetivo | `AuthLoading`, `AuthAuthenticated` |
-| BLoC class | `PascalCase` + sufijo `Bloc` | `AuthBloc` |
-
-### Variables de entorno
-
-- `SCREAMING_SNAKE_CASE` para keys.
-- Ejemplo: `SUPABASE_URL`, `SUPABASE_ANON_KEY`.
+- Nombres describen intención, no implementación (`userRepository` no `UserRepoImpl2`).
+- Getters sin prefijo `get`: `displayName` (no `getDisplayName`).
+- BLoCs (cuando aplique): events en pasado/sustantivo, states como adjetivo/sustantivo, clase con sufijo `Bloc`.
 
 ---
 
-## 2. Estilo de código Dart
+## 2. Estilo de código
 
-### Reglas generales
+> **Lo que sigue aplica a cualquier stack. Si mañana cambiamos de lenguaje, esto sigue valiendo.**
 
-- `flutter analyze` debe pasar sin warnings.
-- `dart format` antes de commit.
-- Líneas < 80 caracteres (soft limit 100).
-- Indentación: 2 espacios (no tabs).
+### General
 
-### Imports
+- El código se lee de arriba a abajo, como una carta.
+- Líneas < 80 caracteres cuando sea posible (soft limit 100).
+- Indentación consistente en todo el proyecto.
+- Sin código muerto, sin TODOs sin issue, sin `print()` debug.
 
-**Orden:**
+### Separación de capas
+
+> Agnóstico del stack. Si mañana BLoC se reemplaza por Riverpod, esto sigue valiendo.
+
+- La **capa de presentación** solo lee estado y dispara eventos. No hace lógica de negocio.
+- La **capa de dominio** no conoce la UI ni el datasource. Pura lógica de negocio.
+- La **capa de datos** implementa interfaces de la capa de dominio. No se importa desde la presentación.
+- Dependencias apuntan hacia adentro: presentation → domain → data.
+- Una función hace una cosa. Si su nombre necesita "y" ("handleLoginAndNavigate"), se divide.
+
+### Comentarios
+
+**Regla única:** comenta el porqué. Nunca el qué.
+
+Tres ejemplos suficientes:
 
 ```dart
-// 1. Dart/Flutter SDK
-import 'package:flutter/material.dart';
+// ✅ El SAT rechaza el CFDI si el campo tiene más de 254 caracteres (regla CFDI 4.0).
+// ❌ Incrementar el contador.
 
-// 2. Third-party packages
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:get_it/get_it.dart';
+// ✅ Workaround: el SAT no responde antes de 6h, así que el backoff llega a 50h.
+// ❌ Backoff de 50 horas.
 
-// 3. Project imports (con prefix package:)
-import 'package:zeiki/core/...';
-import 'package:zeiki/features/auth/...';
-
-// 4. Relative imports (solo mismo feature)
-import '../widgets/header.dart';
-import 'auth_bloc.dart';
-```
-
-**Regla:** preferir `package:zeiki/...` sobre relative imports.
-
-### Strings
-
-- Comillas simples por defecto.
-- Comillas dobles solo con interpolación que mejora legibilidad.
-- Multi-línea con triple comilla simple.
-
-### Null safety
-
-- Tipos explícitos `String?` en vez de `dynamic`.
-- `late` solo cuando sea seguro.
-- `?.` y `??` sobre null checks manuales.
-
-### Async
-
-- `async`/`await` por defecto.
-- Capturar errores con `try`/`catch` o `try`/`on Type catch`.
-- Streams con `await for` o `.listen` con handler de error.
-
----
-
-## 3. Commits
-
-### Conventional Commits
-
-```
-<tipo>(<scope>): <descripción corta> [HDU-XXX]
-
-<cuerpo opcional>
-
-<footer>
-```
-
-### Tipos
-
-| Tipo | Uso | Ejemplo |
-|------|-----|--------|
-| `feat` | Feature nueva | `feat(auth): add biometric login button` |
-| `fix` | Bug fix | `fix(splash): persist onboarding flag` |
-| `refactor` | Sin cambio de comportamiento | `refactor(auth): migrate login to BLoC` |
-| `chore` | Mantenimiento | `chore(deps): upgrade flutter_bloc to 8.1.3` |
-| `docs` | Solo documentación | `docs(arch): add ADR-005 specs decision` |
-| `test` | Solo tests | `test(auth): add login_bloc_test.dart` |
-| `style` | Formato | `style: apply dart format` |
-| `perf` | Performance | `perf(invoices): cache SAT catalogs` |
-
-### Descripción corta
-
-- Imperativo presente ("add" no "added").
-- Sin punto final.
-- < 72 caracteres.
-
-### Cuerpo (opcional)
-
-- Explicar **qué** y **porqué**, no **cómo**.
-- Wrap a 72 chars.
-
-### Footer
-
-- Referencia a spec: `Refs: specs/HDU-XXX.md`
-- Breaking changes: `BREAKING CHANGE: <descripción>`
-- Issues cerrados: `Closes #123`
-
-### Ejemplo
-
-```
-fix(splash): persist onboarding completion flag [HDU-005]
-
-SplashPage navigated to /onboarding on every launch with no session.
-Now saves onboarding_completed to SharedPreferences after first view
-and skips onboarding if true.
-
-- Add SharedPreferences key constant
-- Set flag in OnboardingPage after user views all 4 slides
-- Check flag in SplashPage before navigating
-- Add unit tests for flag logic
-
-Refs: specs/HDU-005-onboarding-flag.md
+// ✅ Esta validación existe porque el cliente puede venir con o sin prefijo internacional.
+// ❌ Validar el teléfono.
 ```
 
 ---
 
-## 4. Pull Requests
+## 3. Testing (qué debe estar probado, no cuánto)
 
-### Título
-
-Mismo formato que commits:
-
-```
-fix(splash): persist onboarding completion flag [HDU-005]
-```
-
-### Descripción (template)
-
-```markdown
-## Resumen
-<1-3 bullets>
-
-## Check de entendimiento
-- Lo que quieres: …
-- Vas a saber que está bien cuando: …
-- Esto NO se va a hacer: …
-
-## Spec
-Ver: [specs/HDU-XXX-slug.md](specs/HDU-XXX-slug.md)
-
-## Cambios
-- Bullet list
-
-## Checklist de review
-- [ ] Tests rojos → verdes documentado
-- [ ] Clean code review pasó
-- [ ] Security review pasó
-- [ ] **Architecture review pasó** (cumple con Target Architecture §1-§3, no introduce anti-patrones §14)
-- [ ] `flutter analyze` sin warnings
-- [ ] `flutter test` pasa
-- [ ] `flutter build apk --debug` compila
-- [ ] Deno tests pasan (si toca edge functions)
-- [ ] QA local en Xiaomi verificó criterios de aceptación
-
-## Screenshots / Logs
-<si aplica>
-```
-
-### Reviewers
-
-- 1 reviewer mínimo (Hugo).
-- Auto-merge OK para MVP, code review estricto para producción.
-
----
-
-## 5. Comentarios
-
-### Cuándo comentar
-
-✅ **Sí:**
-- Lógica de negocio no obvia (el "porqué").
-- Workarounds conocidos con link al issue.
-- Constraints del SAT o APIs externas.
-- Excepciones reguladas (CFDI, RFC validation).
-
-❌ **No:**
-- Lo que el código ya dice.
-- Código obsoleto (eliminarlo).
-- TODOs sin issue asociado.
-
-### TODO format
-
-```dart
-// TODO(hdu-XXX): descripción de lo que falta
-// Ejemplo:
-// TODO(hdu-013): agregar integration test para flujo de auth
-```
-
-> ⚠️ **GOTCHA del analyzer:** el lint marca `// TODO` como warning incluso cuando aparece en prosa. Evitar la palabra suelta "TODO" en comentarios que no sean TODOs reales.
-
----
-
-## 6. Testing (matriz de criticidad, NO porcentajes)
-
-> **Cambio importante en v2:** ya no usamos porcentajes de coverage. Son engañosos. Usamos la **matriz de criticidad** definida en §11 de la [Target Architecture](architecture/target-architecture.md).
-
-### Principio
-
-**Objetivo:** que todo flujo crítico esté protegido por tests que fallan si se rompe. **No** buscamos un número de coverage.
-
-### Matriz de criticidad (resumen, ver Target Architecture §11 para detalle)
-
-| Componente | Criticidad | Tipo de test mínimo |
-|------------|------------|---------------------|
-| Casos de uso fiscales (timbrado, cálculo) | **Muy alta** | Unit + integration |
-| Descarga SAT | **Muy alta** | Unit (mockeando SAT) + integration |
-| Login | **Muy alta** | Unit + widget + integration |
-| Cálculo de impuestos | **Muy alta** | Unit |
-| Repositorios | Alta | Unit con mocks |
-| BLoCs | Alta | Unit con `bloc_test` |
-| Edge Functions | Alta | Unit Deno |
-| Widgets visuales no críticos | Baja | Widget selectivo |
-| Helpers / utils | Media | Unit si la lógica no es trivial |
-| Migraciones SQL | Alta | Test contra DB staging |
+> **No usamos porcentajes de coverage.** Son engañosos. Usamos la **matriz de criticidad** definida en §11 de la [Target Architecture](architecture/target-architecture.md). El coverage % se reporta en el PR pero NO es criterio de aceptación.
 
 ### Reglas
 
-- **TDD para flujos críticos:** escribir el test que falla ANTES de implementar.
-- **Regression para cada bug:** un test que reproduce el bug (falla antes del fix, pasa después).
-- **Pipeline:** todo test debe pasar antes de mergear a `main`.
-- **Coverage como derivado, no como meta:** el coverage % se reporta en el PR pero NO es criterio de aceptación. Lo que importa es que los flujos críticos estén cubiertos.
+- **TDD para flujos críticos:** el test se escribe ANTES del código, falla, luego se implementa, pasa.
+- **Regression para cada bug arreglado:** un test que reproduce el bug. Falla antes del fix, pasa después.
+- **Un test, un comportamiento.** Si un test tiene varios asserts no relacionados, se divide.
+- **Mocks solo donde se necesita:** preferir dobles de prueba simples (`fakeRepository`) sobre mocks con `when().thenAnswer()` cuando es viable.
+- **Tests viven con el código:** junto al archivo que prueban, sufijo `_test`.
 
 ### Naming de tests
 
+Describen comportamiento, no implementación:
+
 ```dart
-// ✅ OK
+// ✅
 test('should return user when credentials are valid', () { ... });
 test('should throw AuthException when password is wrong', () { ... });
 
-// ❌ Evitar
+// ❌
 test('test the login method', () { ... });
 ```
 
-### Estructura AAA (Arrange-Act-Assert)
+### Estructura
 
-```dart
-test('login should authenticate user', () async {
-  // Arrange
-  final mockRepo = MockAuthRepository();
-  when(mockRepo.signIn(...)).thenAnswer((_) async => testUser);
-  final bloc = AuthBloc(signInUseCase: SignInUseCase(mockRepo));
-
-  // Act
-  bloc.add(AuthSignInWithEmailRequested(email: '...', password: '...'));
-  await Future.delayed(Duration.zero);
-
-  // Assert
-  expect(bloc.state, isA<AuthAuthenticated>());
-});
-```
+Arrange (preparar) → Act (actuar) → Assert (verificar). Sin pasos extra.
 
 ---
 
-## 7. Patrones recurrentes (bug classes conocidas)
+## 4. Patrones recurrentes (Bug Cookbook)
 
-> **Patrones de bugs que ya detectamos.** Si encuentras un caso que coincide, seguir el fix documentado. Si es un caso nuevo, documentarlo aquí también.
+> **Catálogo de bugs que ya detectamos.** Si encuentras un caso que coincide, sigue el fix documentado. Si es un caso nuevo, documéntalo aquí también. Con el tiempo esto se vuelve una "receta de cocina" donde alguien dice "esto ya nos pasó" y encuentra la solución en cinco minutos.
 
-### State staleness on navigation (HDU-MANUAL-002c)
+### State staleness on navigation
 
-**Síntoma:** Una página padre cachea estado que la página hija puede mutar. Al volver al padre, la UI muestra el estado viejo.
+**Síntoma:** una página cachea estado en su inicialización que la página hija puede mutar. Al volver al padre, la UI muestra el estado viejo.
 
-**Fix pattern:** refrescar el estado del padre al regresar de la página hija:
+**Fix pattern:** refrescar el estado del padre al regresar de la página hija.
 
 ```dart
-// ❌ Antes — refresh solo en initState
+// ❌ Refresh solo al iniciar
 onTap: () {
-  Navigator.of(context).pushNamed('/child-page');
+  Navigator.pushNamed(context, '/child');
 },
 
-// ✅ Después — refresh on return
+// ✅ Refresh al volver
 onTap: () async {
-  await Navigator.of(context).pushNamed('/child-page');
-  if (mounted) {
-    await _loadStatus();
-  }
+  await Navigator.pushNamed(context, '/child');
+  if (mounted) await _loadStatus();
 },
 ```
 
-### Banners UX atómicos por feature (HDU-MANUAL-003)
+### Banners UX atómicos por feature
 
 **Regla:** cada banner de estado vive en la página donde el usuario **actúa** sobre ese estado, no en páginas adyacentes.
 
-- "Sincronizar desde la nube" → en `efirma_configuration_page`.
-- "Descarga Automática Activa" → en `sat_configuration_page`.
-- **NO** duplicar el mismo banner en 2 menús.
+- "Sincronizar desde la nube" → en la página de configuración de eFirma.
+- "Descarga Automática Activa" → en la página de configuración SAT.
+- NO duplicar el mismo banner en dos menús: confunde sobre dónde está la fuente de verdad.
 
 ---
 
-## 8. Git workflow
+## 5. Linter y analyzer
 
-### Branching
-
-- `main` — siempre deployable, protegido.
-- `feat/*`, `fix/*`, `refactor/*`, `chore/*` — trabajo en progreso.
-- `hotfix/*` — solo para emergencias.
-
-### Commits
-
-- Squash OK para features pequeñas.
-- Commits atómicos para features grandes (un commit por paso lógico).
-
-### Merge
-
-- **No fast-forward** para features (`--no-ff`) — preserva historia.
-- Fast-forward OK para hotfixes.
-- Eliminar rama después de merge.
+- El linter del stack debe pasar sin warnings por defecto.
+- **Excepción documentada:** un warning es aceptable si tiene una justificación escrita (comentario en el código o nota en el PR). Ejemplos válidos:
+  - `deprecated_member` durante una migración planeada.
+  - `avoid_print` en código de debug que se quita antes de merge.
+- **Excepción NO documentada:** el warning se arregla. No se acepta "lo arreglamos después" sin issue.
 
 ---
 
-## 9. Documentación en código
+## 6. Seguridad (qué se hace, no cómo)
 
-### Docstrings para APIs públicas
+- Credenciales nunca en código. Variables de entorno o secret manager.
+- Inputs validados en el cliente (UX) y en el servidor (verdad).
+- Auth obligatorio en cada endpoint protegido. Sin endpoints "abiertos por compatibilidad".
+- Datos sensibles encriptados en reposo y tránsito.
+- Almacenamiento seguro para credenciales (nunca en `SharedPreferences` ni en archivos planos).
+- Sin logs de información sensible (passwords, tokens, RFCs completos, eFirma).
 
-```dart
-/// Authenticates a user with email and password.
-///
-/// Throws [AuthException] if credentials are invalid.
-/// Returns the authenticated [UserEntity] on success.
-Future<UserEntity> signIn({
-  required String email,
-  required String password,
-});
-```
-
-### Comentarios regulatorios
-
-Cuando el código toca temas regulados (SAT, CFDI), referenciar la fuente:
-
-```dart
-// CFDI 4.0 - SAT spec sección X.Y
-// Ver: http://www.sat.gob.mx/.../cfdv40.xsd
-```
-
----
-
-## 10. Pipeline local completo
-
-> **Regla:** el pipeline local debe correr **TODOS** los tipos de tests del repo.
-
-### Flutter (cliente)
-
-```powershell
-flutter analyze
-flutter test
-flutter build apk --debug
-```
-
-### Deno (edge functions) — TODAS
-
-```powershell
-foreach ($fn in Get-ChildItem "supabase/functions") {
-  Push-Location $fn
-  deno check index.ts
-  deno test --allow-read --allow-env
-  Pop-Location
-}
-```
-
-### Si hay migraciones SQL nuevas
-
-Aplicar a staging y verificar idempotencia.
-
-### Baseline documentado
-
-El conteo de tests por suite se mantiene en `docs/test-baseline.md`. Si una HDU cambia el conteo, actualizar el baseline en la misma PR.
-
----
-
-## 11. Regla de oro: NO INFERENCIA, SOLO PRUEBAS
-
-> **Cuando estés debuggeando un bug, NUNCA digas "probablemente pasa X" o "debe ser Y".**
->
-> **Cita el código exacto:** archivo, línea, método.
->
-> Si no puedes demostrar algo con código o test corriendo, **dilo explícitamente** como hipótesis, no como conclusión.
-
-### ❌ Lo que NO se hace
-
-```
-"Probablemente el bug es que el listener no se desuscribe"
-"Debe ser un problema de timing en el async"
-"Seguro el SAT rechaza porque la firma está mal"
-```
-
-### ✅ Lo que SÍ se hace
-
-```
-"En efirma_service.dart línea 1492-1510, hasCertificate() lee de
- _secureStorage. Después de 'Borrar datos', FlutterSecureStorage queda
- vacío pero Supabase (user_efirma_credentials, línea 1814) mantiene
- el registro. Inconsistencia confirmada en código."
-```
-
-### Por qué
-
-- La inferencia lleva a fixes incorrectos.
-- Hugo pierde confianza cuando le "adivinas".
-- Las sesiones futuras no pueden verificar claims vagos.
-- Los tests no pueden reproducir bugs descritos con "probablemente".
-
-### Cuándo SÍ se permite hipótesis
-
-- Cuando explícitamente dices "hipótesis a verificar:".
-- La hipótesis viene con el código/línea que la generaría.
-- Propones cómo verificarla (qué test correr, qué log capturar).
+El "cómo" se implementa depende del stack y vive en código + workflow.
 
 ---
 

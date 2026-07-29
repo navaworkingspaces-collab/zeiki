@@ -7,8 +7,9 @@
 ## Documentación
 
 - **[Target Architecture](docs/architecture/target-architecture.md)** — el plano maestro. Léelo primero.
-- (Próximamente) `docs/workflow.md` — protocolo de desarrollo.
-- (Próximamente) `docs/conventions.md` — convenciones código/commits.
+- **[Workflow](docs/workflow.md)** — cómo se trabaja (12 pasos, check de entendimiento, Definition of Done).
+- **[Convenciones](docs/conventions.md)** — qué debe cumplir el código (agnóstico del stack).
+- **[Git + CI/CD](docs/git.md)** — comandos, branches, pipeline, PRs.
 
 ## Slogan
 
