@@ -2,7 +2,7 @@
 
 > **El plano maestro hacia donde va Zeiki.** Documento vivo, vigente para migraciones totales o parciales.
 >
-> **Última actualización:** 2026-07-29 (creación inicial)
+> **Última actualización:** 2026-07-29 (v2: feedback de Hugo, 5 nuevas secciones)
 > **Estado del proyecto:** Fase 1 — MVP. Reescritura desde cero iniciada el 2026-07-29.
 
 ---
@@ -17,7 +17,104 @@ Este documento describe **cómo se construye cualquier feature** de Zeiki, no **
 
 ## 📍 Dónde está Zeiki hoy
 
-Zeiki se encuentra en la **Fase 1 (MVP)** del roadmap arquitectónico. La reescritura desde cero arrancó el 2026-07-29 con la aprobación de este documento. El código del proyecto anterior se conserva como referencia histórica (no se migra).
+Zeiki se encuentra en la **Fase 1 (MVP)** del roadmap arquitectónico. La reescritura desde cero arrancó el 2026-07-29 con la aprobación de este documento. El código del proyecto anterior se conserva únicamente como **referencia para comprender reglas de negocio, algoritmos o integraciones** cuando resulte útil — no se arrastra su deuda técnica.
+
+---
+
+## 🧭 Mapa del negocio
+
+Antes de hablar de capas o de features, hay que entender **qué es Zeiki en su esencia**. Esta sección es el "corazón" del producto. Todo lo demás del documento existe para soportar este flujo.
+
+### Core del negocio
+
+El corazón de Zeiki no es Flutter, ni Supabase, ni BLoC. Es este flujo:
+
+```
+Usuario
+  ↓
+Descarga CFDIs
+  ↓
+Procesa CFDIs
+  ↓
+Clasifica CFDIs
+  ↓
+Calcula impuestos
+  ↓
+Genera información
+  ↓
+Ayuda al usuario a decidir
+```
+
+Si una pieza de la arquitectura no soporta alguna parte de este flujo, hay que preguntarse si la pieza es necesaria.
+
+### Relaciones entre dominios
+
+Los dominios no son listas aisladas. Se relacionan entre sí:
+
+```mermaid
+flowchart LR
+    U(("Usuario"))
+
+    U -->|tiene| CONF["Configuración"]
+    U -->|posee| CLI["Clientes"]
+    U -->|genera| FIS["Fiscal<br/>(CFDIs)"]
+    U -->|consulta| REP["Reportes"]
+    U -->|interactúa con| ASI["Asistencia"]
+    U -->|es| IDE["Identidad"]
+
+    FIS -.usa.-> CLI
+    REP -.lee.-> FIS
+    REP -.lee.-> CLI
+    ASI -.lee.-> FIS
+    ASI -.lee.-> REP
+    CONF -.gobierna.-> U
+
+    style U fill:#f9f,stroke:#333
+```
+
+**Lectura:**
+- Un usuario **tiene** configuración, **posee** clientes, **genera** CFDIs, **consulta** reportes e **interactúa con** asistencia.
+- El dominio Fiscal **usa** el dominio Clientes (una factura necesita un cliente).
+- Reportes **lee** de Fiscal y de Clientes.
+- Asistencia **lee** de Fiscal y de Reportes para dar recomendaciones.
+- Configuración **gobierna** al usuario (preferencias, plan, notificaciones).
+
+### Context Map (relación con sistemas externos)
+
+Cómo los dominios se conectan con el mundo exterior:
+
+```mermaid
+flowchart TB
+    subgraph EXT [Sistemas externos]
+        SAT["SAT<br/>(SOAP)"]
+        FAC["Facturama<br/>(REST)"]
+    end
+
+    subgraph CORE [Núcleo de Zeiki]
+        FIS["Dominio<br/>Fiscal"]
+    end
+
+    subgraph SOP [Soporte]
+        CLI["Dominio<br/>Clientes"]
+        REP["Dominio<br/>Reportes"]
+        ASI["Dominio<br/>Asistencia<br/>(LLM)"]
+        CONF["Dominio<br/>Configuración"]
+        IDE["Dominio<br/>Identidad"]
+    end
+
+    SAT <-->|descarga CFDI| FIS
+    FAC <-->|timbrado| FIS
+
+    FIS -.alimenta.-> REP
+    CLI -.alimenta.-> FIS
+    ASI -.consulta.-> REP
+    IDE -.autentica.-> CONF
+```
+
+**Lectura:**
+- **SAT** y **Facturama** solo hablan con el dominio Fiscal. Ningún otro dominio toca el exterior.
+- Esto aísla el riesgo: si el SAT cambia su API, solo se modifica el dominio Fiscal.
+- Identidad es transversal: autentica al usuario para todos los demás dominios.
 
 ---
 
@@ -123,6 +220,26 @@ MVP  ────────►  Observabilidad ──► Testing completo ─�
 
 ---
 
+## 4.1. Evolución por escala (guía de decisiones basada en evidencia)
+
+Este es un roadmap **numérico**, complementario al roadmap de fases de §4. Define qué decisión tomar cuando Zeiki alcanza ciertos umbrales de usuarios activos.
+
+| Usuarios activos | Decisión |
+|------------------|----------|
+| **100** | No hacemos nada. La arquitectura actual sobra. |
+| **1,000** | Agregar cache del dashboard (Redis o similar). Optimizar queries que ya duelan. |
+| **10,000** | Separar workers (jobs async en proceso/servicio dedicado, no Edge Functions). Rate limiting por tier enforced. |
+| **50,000** | Evaluar microservicios. Extraer los dominios que necesiten escalar independientemente. |
+| **100,000** | Evaluar particionado de Postgres (sharding por user_id, partición por fecha, etc.). |
+| **1,000,000** | (No pensado todavía. Problema de otra escala. Se aborda cuando se llegue con datos.) |
+
+**Reglas:**
+- Toda decisión se activa cuando el umbral se **alcanza y se sostiene** durante 3 meses (no se reacciona a picos).
+- Antes de activar cualquier decisión, se mide: latencia, costo, tasa de error, uso de CPU/memoria.
+- Si una decisión se activa y luego los usuarios bajan del umbral, se revierte.
+
+---
+
 ## 5. Diagrama de Capas (agnóstico de features)
 
 Zeiki sigue una arquitectura en 4 capas. La dirección de las dependencias siempre va **hacia adentro**: las capas externas dependen de las internas, nunca al revés.
@@ -184,6 +301,21 @@ Zeiki se organiza en dominios. **Un dominio es un área del problema, no una pan
 | **Configuración** | Preferencias del usuario y de la app. | Perfil, planes, notificaciones. |
 
 **Regla:** si un nuevo concepto del negocio no encaja en ningún dominio existente, se crea un dominio nuevo (no se mete a la fuerza en uno existente). Si un dominio crece demasiado, se divide.
+
+### Ownership por dominio
+
+Cada dominio tiene un dueño único. Aunque hoy seas tú solo, declarar el ownership evita caos cuando llegue un segundo dev.
+
+| Dominio | Dueño | Responsabilidad | Restricción |
+|---------|-------|------------------|-------------|
+| **Identidad** | Hugo (Zeiki Core) | Sesión, autenticación, recuperación, biometría. | No modifica otros dominios. |
+| **Fiscal** | Hugo (Zeiki Core) | CFDIs, descarga SAT, timbrado Facturama, eFirma, cancelaciones. | Único dominio que habla con SAT y Facturama. |
+| **Clientes** | Hugo (Zeiki Core) | Alta, validación RFC, direcciones. | No accede a SAT ni Facturama. |
+| **Reportes** | Hugo (Zeiki Core) | Cálculos, dashboard, exportación. | Solo lee de otros dominios. Nunca escribe. |
+| **Asistencia** | Hugo (Zeiki Core) | LLM, recomendaciones, chat fiscal. | Solo lee; no muta datos del usuario. |
+| **Configuración** | Hugo (Zeiki Core) | Perfil, planes, preferencias, notificaciones. | Gobierna al usuario; no a otros dominios. |
+
+**Regla:** un dominio solo modifica SU data. Para escribir en otro dominio, publica un evento (cuando exista el Event Bus) o hace una llamada explícita al caso de uso del otro dominio (en MVP).
 
 ---
 
@@ -344,6 +476,58 @@ if (TierService.hasFeature('nuevo_dashboard')) {
 
 ---
 
+## 12.1. Arquitectura Operacional
+
+La arquitectura no termina cuando `flutter build` compila. También incluye cómo se **mantiene vivo** el sistema en producción.
+
+### Backups
+
+- **Postgres:** Supabase hace backups automáticos diarios (Point-in-Time Recovery habilitado en plan Pro).
+- **Storage (archivos CFDI, eFirma):** replicación geográfica gestionada por Supabase.
+- **Verificación:** un test automatizado restaura un backup a staging una vez al mes para confirmar que es recuperable.
+
+### Rotación de secretos
+
+- Credenciales (Supabase keys, OAuth client secrets, Facturama API key) en `assets/.env` para dev, en secretos de Supabase para prod.
+- Rotación cada 6 meses o inmediatamente si hay sospecha de compromiso.
+- Proceso documentado en `docs/runbooks/rotate-secrets.md` (pendiente de crear).
+
+### Recuperación ante desastres
+
+- **RPO (Recovery Point Objective):** máximo 24h de datos perdidos (corte del último backup).
+- **RTO (Recovery Time Objective):** máximo 4h para volver a tener la app operativa.
+- Plan documentado en `docs/runbooks/disaster-recovery.md` (pendiente).
+
+### Monitoreo y alertas
+
+- Eventos críticos (login fallido, error 500, timeout de proveedor externo) en `app_events` con nivel ERROR.
+- Alertas simples: correo a Hugo si más de 10 errores 500 en 5 minutos, o si la tasa de fallo de descarga SAT supera el 20%.
+
+### Manejo de incidentes
+
+- Niveles: P1 (app caída), P2 (feature crítica caída), P3 (degradación).
+- Tiempo de respuesta: P1 inmediato, P2 < 2h, P3 < 1 día hábil.
+- Post-mortem obligatorio para P1 y P2, archivado en `docs/postmortems/`.
+
+### Disponibilidad de proveedores externos
+
+- **SAT:** sin SLA público. Asumir caídas frecuentes. La app debe funcionar para tareas que no requieren SAT.
+- **Facturama:** depende del plan contratado. Documentar en onboarding cuál es el plan y sus límites.
+- **Supabase:** SLA 99.9% en plan Pro. Caídas cortas, asumibles.
+
+### Límites y cuotas a respetar
+
+- **Supabase Edge Functions:** timeout 150s. Patrón async + crons para jobs largos.
+- **Supabase Postgres:** tamaño de fila, número de conexiones, tamaño de base según plan.
+- **Facturama:** límite de timbrado por minuto/hora según plan. Documentar en el dominio Fiscal.
+
+### Operación por una sola persona
+
+- Toda la operación (deploy, monitoreo, respuesta a incidentes) debe ser realizable por Hugo solo, en horario laboral.
+- Si algo requiere estar 24/7 pendiente, se documenta como restricción y se busca automatizar o delegar antes de Fase 4.
+
+---
+
 ## 13. ADRs (Architecture Decision Records)
 
 Cada decisión grande tiene un ADR con este formato: **Decisión / Por qué / Trade-offs / Cuándo se revisa.**
@@ -390,12 +574,35 @@ Cada decisión grande tiene un ADR con este formato: **Decisión / Por qué / Tr
 - **Trade-offs:** si un dominio crece demasiado, se divide (ej. "Fiscal" en "Descarga", "Timbrado", "Firma").
 - **Revisar cuando:** un dominio supere 15 archivos en `domain/` o se vuelva claro que dos áreas no comparten reglas.
 
-### ADR-007: Reescritura desde cero (no evolución gradual)
+### ADR-007: Reescritura desde cero, con reutilización de conocimiento
 
-- **Decisión:** el código del proyecto anterior no se migra. Se reescribe siguiendo este documento.
-- **Por qué:** la deuda técnica acumulada hace más rápida la reescritura que la mejora incremental. App sin clientes en producción elimina el riesgo del "valle".
-- **Trade-offs:** se pierde el historial de git del proyecto anterior (se conserva como referencia en otro repo).
+- **Decisión:** no existe el objetivo de migrar código existente. El código previo se conserva únicamente como referencia para comprender reglas de negocio, algoritmos o integraciones cuando resulte útil.
+- **Por qué:** la deuda técnica acumulada hace más rápida la reescritura que la mejora incremental. App sin clientes en producción elimina el riesgo del "valle". Reutilizar conocimiento (un algoritmo, una integración validada) no es lo mismo que arrastrar deuda.
+- **Trade-offs:** se requiere disciplina para distinguir "reutilizar lo bueno" de "arrastrar lo malo". Toda reutilización se documenta con la razón.
 - **Revisar cuando:** N/A (ya se ejecutó).
+
+---
+
+## 13.1. Decisiones diferidas
+
+Cosas que **se pensaron** y se decidió **no hacer** (todavía). Esto evita que dentro de seis meses alguien pregunte "¿por qué nunca consideramos X?".
+
+| Decisión diferida | Por qué se difirió | Cuándo se revisa |
+|-------------------|--------------------|--------------------|
+| **Offline mode** | Aumenta complejidad de sincronización. App no es crítica offline en MVP. | Cuando el usuario lo pida o cuando haya 100+ usuarios activos. |
+| **Sincronización incremental de CFDIs** | La descarga masiva ya cubre el caso común. | Cuando la descarga completa tarde más de 1 hora por usuario. |
+| **Push notifications** | Se puede resolver con polling en MVP. | Fase 2 (Observabilidad/Telemetría) si se justifica. |
+| **Cache distribuido (Redis)** | Postgres + cache local cubren MVP. | Cuando lleguemos a 1,000 usuarios activos (umbral de §4.1). |
+| **IA local (on-device)** | Requiere modelos cuantizados, batería, almacenamiento. El LLM server-side cubre MVP. | Si el costo de LLM server-side supera el beneficio. |
+| **Versionado de esquemas de BD** | Migraciones SQL ad-hoc bastan por ahora. | Cuando haya necesidad de rollback atómico entre versiones. |
+| **Multi-tenancy** | No es producto white-label. | Si se ofrece como servicio a otras empresas. |
+| **App iOS** | No priorizado. Android es el target. | Cuando haya usuarios iOS demandantes. |
+| **Event Bus / Kafka** | No hay múltiples consumidores todavía. | Cuando duela (umbral 50K usuarios o múltiples consumidores reales). |
+| **Microservicios** | La complejidad operativa no se justifica. | Cuando un dominio necesite escalar independientemente. |
+| **GraphQL** | REST + Edge Functions cubren el caso. | Si el tamaño de las respuestas REST se vuelve problema. |
+| **Kubernetes** | Una sola instancia cubre la carga. | Cuando el costo/beneficio de orquestación supere al de VM única. |
+
+**Regla:** una decisión diferida no se reconsidera "porque sí". Se reconsidera cuando se cumple la condición de revisión (umbral, tiempo, evidencia).
 
 ---
 
