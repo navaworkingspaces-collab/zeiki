@@ -47,6 +47,29 @@ Crear rama nueva cuando:
 | Chore | `chore/hdu-XXX-slug` |
 | Hotfix | `hotfix/hdu-XXX-slug` |
 
+### Branching vs Trunk-based
+
+> **Decisión:** Zeiki usa **branching por feature**, NO trunk-based con feature flags puros. Aquí el porqué.
+
+**Por qué branching:**
+
+- Equipo de 1 persona, pero el modelo escala a 3-5 devs sin cambio de workflow.
+- Aislamiento de cambios: una HDU no afecta a otra hasta que se mergea.
+- Code review más limpio: se revisa un cambio cohesivo, no un stream de commits.
+- Compatible con el workflow de 12 pasos (cada paso encaja con una rama).
+
+**Por qué NO trunk-based (aún):**
+
+- Trunk-based asume deploys muy frecuentes con feature flags maduros. Zeiki tiene feature flags pero la cadencia de release no es diaria.
+- Sin tests de integración rápidos, trunk-based rompe cosas en main. La matriz de criticidad cubre, pero el test infra no está listo.
+- Para 1 dev con cadencia de cambio baja, branching es más simple y suficiente.
+
+**Cuándo se reconsidera:**
+
+- El equipo crece a 3+ devs haciendo PRs concurrentes al mismo feature.
+- La cadencia de release sube a diaria (necesita trunk + flags maduros).
+- Aparece dolor real con conflictos de merge frecuentes.
+
 ### Comandos
 
 ```powershell
