@@ -25,7 +25,9 @@
 
 **Toda HDU arranca con esto.** Es la salvaguarda principal contra "yo entendí otra cosa".
 
-**Quién:** Mavis (orquestador) redacta, Hugo aprueba.
+**Quién redacta:** **Hugo** escribe las 3 líneas con sus propias palabras. Mavis **refina** (limpia, hace verificable, quita ambigüedad), pero **no cambia la intención**. Si la redacción refinada pierde la intención original, se vuelve a Hugo.
+
+**Por qué:** pedirle a la persona que diga lo que quiere con sus propias palabras es la mejor manera de llegar a lo mismo. Si Mavis redacta desde cero, introduce su interpretación. Si Hugo redacta, la intención es suya y solo se pule la forma.
 
 **Output (3 líneas exactas):**
 

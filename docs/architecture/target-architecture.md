@@ -377,6 +377,16 @@ Cada dominio tiene un dueño único. Aunque hoy seas tú solo, declarar el owner
 | **Asistencia** | Hugo (Zeiki Core) | LLM, recomendaciones, chat fiscal. | Solo lee. Si una recomendación lleva a una acción, la dispara el dominio dueño de esa data. |
 | **Configuración** | Hugo (Zeiki Core) | Perfil, planes, preferencias, notificaciones. | Gobierna al usuario; no a otros dominios. |
 
+**Servicios transversales (no son dominios, viven en `lib/core/`):**
+
+- **Auth** (gestión de tokens, refresh, logout) → `lib/core/auth/`.
+- **TierService** (state global de tier + feature flags) → `lib/core/tiers/`.
+- **BiometricService** → `lib/core/services/`.
+- **PostalCodeService** → `lib/core/services/`.
+- **Logging centralizado** → `lib/core/logging/`.
+
+**Regla:** los features (`lib/features/<dominio>/`) **importan** de `lib/core/`, pero `lib/core/` **NO importa** de `lib/features/`. Si un servicio transversal necesita lógica de un dominio, el dominio expone un caso de uso, NO se invierte la dependencia.
+
 **Regla:** un dominio solo modifica SU data. Para escribir en otro dominio, publica un evento (cuando exista el Event Bus) o hace una llamada explícita al caso de uso del otro dominio (en MVP).
 
 ### Aclaración sobre Asistencia y mutación
@@ -530,6 +540,16 @@ Cuando una feature se va a apagar (no solo un flag, sino la feature completa):
 6. **Cleanup post-apagado:** remover código, tests, docs, migraciones de datos (si las hubo). HDU dedicada.
 
 **Status:** Diferido. Aplica cuando se apague la primera feature (ej. "Descarga del día" cuando esté 100% reemplazada por la automática).
+
+---
+
+## 🗃️ Repos relacionados
+
+- **`zeiki` (este repo):** código nuevo, reescritura desde cero. Único repo activo.
+- **`seiki_app` (legacy, en `navaworkingspaces-collab/`):** el proyecto anterior. Se mantiene en **read-only indefinidamente** como referencia histórica. NO se borra.
+  - **Para qué sirve:** consultar algoritmos validados, integraciones probadas, reglas de negocio aprendidas.
+  - **Qué NO se hace:** no se commitea a `seiki_app`. No se hacen PRs. No se reabren HDUs cerradas ahí.
+  - **Migración selectiva:** se traen **handoffs, lecciones y specs cerradas** que valgan la pena. NO se trae código. Procedimiento en `workflow.md` §Migración selectiva.
 
 ### Cómo se crean
 
@@ -805,6 +825,7 @@ Lo que **NO** se hace en Zeiki, y por qué.
 | `docs/current-state.md` | Pendiente | Mavis | Al cerrar la primera HDU de la reescritura. |
 | `docs/handoffs/` | Pendiente | Mavis | Al cerrar la primera HDU de la reescritura. |
 | `docs/features/<nombre>.md` | Pendiente | Mavis | Al cerrar la primera feature del MVP. |
+| `docs/templates/` | **Creado** | Mavis | Existe `hdu-explore.md`. Plantilla para HDUs de research. |
 | `codemagic.yaml` | Pendiente | Mavis | Al configurar CI/CD (Fase 1). |
 | `supabase/migrations/` (primera migración) | Pendiente | Mavis | Al implementar la primera HDU con cambio de schema. |
 | `feature_sync_test.dart` | Pendiente | Mavis | Al implementar el sistema de feature flags. |
