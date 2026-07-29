@@ -29,7 +29,7 @@ Zeiki tiene pantallas con estado no trivial: loading, error, datos asíncronos, 
 - **`setState` puro:** simple pero no escala a estado compartido. Mezcla UI con lógica.
 - **Provider / Riverpod:** viables, más simples que BLoC, pero menos explícitos en el flujo de eventos. Útiles para estado derivado simple, no para flujos complejos.
 - **GetX:** todo-en-uno (state + DI + navegación). Acopla demasiado, fomenta anti-patrones (servicios estáticos).
-- **Redux:**过度 para una app móvil. Boilerplate alto.
+- **Redux:** excesivo para una app móvil. Boilerplate alto.
 
 ## Trade-offs
 

@@ -575,6 +575,7 @@ Cada decisión grande tiene un ADR en `docs/adr/ADR-XXX-<slug>.md` con el format
 | 007 | Deno + TS para Edge Functions | [docs/adr/ADR-007-deno-edge-functions.md](../adr/ADR-007-deno-edge-functions.md) | Aceptado |
 | 008 | Estructura de dominios | [docs/adr/ADR-008-domain-structure.md](../adr/ADR-008-domain-structure.md) | Aceptado |
 | 009 | Reescritura desde cero | [docs/adr/ADR-009-rewrite-with-knowledge-reuse.md](../adr/ADR-009-rewrite-with-knowledge-reuse.md) | Aceptado |
+| 010 | TierService como state global | [docs/adr/ADR-010-tier-service.md](../adr/ADR-010-tier-service.md) | Aceptado |
 
 **Cómo se agregan nuevos ADRs:**
 
