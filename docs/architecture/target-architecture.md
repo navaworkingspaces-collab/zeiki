@@ -165,7 +165,7 @@ Estos principios guían todas las decisiones técnicas. Si una decisión los vio
 
 ## 2. Atributos de Calidad
 
-Para cada atributo, qué significa concreto para Zeiki.
+Para cada atributo, qué significa concreto para Zeiki. Los **atributos generales** se aterrizan después en **SLOs por feature** (abajo), que son medibles y accionables.
 
 | Atributo | Qué significa para Zeiki |
 |----------|--------------------------|
@@ -177,6 +177,27 @@ Para cada atributo, qué significa concreto para Zeiki.
 | **Seguridad** | Credenciales nunca en código. Datos sensibles encriptados en reposo y tránsito. Auth obligatorio en cada endpoint. |
 | **Rendimiento** | Operaciones visibles al usuario (UI, cálculos, validaciones) responden en < 2s. Jobs async no bloquean la UI. |
 | **Costo operativo** | Una sola persona puede operar y mantener el sistema en horario laboral normal. |
+
+### SLOs por feature (medibles, accionables)
+
+Los atributos anteriores son dirección. Los SLOs son lo que se **mide** para saber si vamos bien. Cada feature crítica tiene su SLO explícito.
+
+| Feature | SLO | Cómo se mide |
+|---------|-----|---------------|
+| **Login (email)** | p95 < 500ms | log de `auth.sign_in_completed` con duración |
+| **Login (Google)** | p95 < 1.5s (OAuth es más lento por naturaleza) | log de `auth.google_sign_in_completed` con duración |
+| **Cálculo de IVA / ISR** | p99 < 100ms | log de `tax.calculation_completed` con duración |
+| **Generación de factura (timbrado Facturama)** | p95 < 3s | log de `invoice.timbrado_completed` con duración |
+| **Descarga SAT (job completo)** | 95% de jobs en < 7 min | log de `sat.download_completed` con duración total |
+| **Dashboard (carga inicial)** | p95 < 2s | log de `dashboard.loaded` con duración |
+| **Búsqueda de clientes** | p95 < 300ms | log de `clients.search_completed` con duración |
+| **Disponibilidad general** | 99% mensual (excluye mantenimientos programados) | uptime monitor externo |
+
+**Reglas:**
+
+- Si un SLO se viola consistentemente, se abre HDU para investigar.
+- Los SLOs se revisan **trimestralmente** (en cleanup de HDU).
+- Un SLO que se incumple por más de 1 mes consecutivo es candidato a "se acepta el nuevo nivel" o "se invierte en arreglar".
 
 ---
 
@@ -466,6 +487,36 @@ Feature flags permiten desplegar código que no se activa para todos.
 | **Release** | Apagar feature antes de estar lista. | "Nuevo dashboard" (off hasta que se valide). |
 | **Experiment** | A/B test entre variantes. | "Versión A vs B del flujo de onboarding". |
 | **Ops** | Kill switch operacional. | "Desactivar descarga SAT si el SAT está caído". |
+
+### Regla de CD seguro: feature flag obligatorio
+
+> **Toda feature nueva nace detrás de un feature flag** (tipo Release) y permanece oculta hasta que se valida explícitamente. Esto convierte el CD de "cualquier cambio llega a usuarios inmediatamente" a "cualquier cambio llega al servidor, pero solo lo activamos cuando estamos listos".
+
+**Aplica a:**
+
+- Features que tocan el flujo principal del usuario.
+- Cambios visuales que afectan la primera impresión.
+- Integraciones nuevas con proveedores externos.
+
+**No aplica a:**
+
+- Bug fixes que arreglan comportamiento roto.
+- Refactors sin cambio de comportamiento.
+- Cambios solo de docs.
+
+**Cómo se ve en el spec de la HDU:**
+
+```markdown
+**Feature flag requerido:** [Release] `nuevo_dashboard`
+**Plan de remoción:** tras 30 días con 100% de usuarios activos y métrica estable.
+```
+
+**Plan de remoción (deprecación):**
+
+1. Flag al 100% por al menos 30 días.
+2. Métrica estable (sin regresión).
+3. Remover el flag del código y de la BD.
+4. HDU de cleanup dedicada.
 
 ### Cómo se crean
 

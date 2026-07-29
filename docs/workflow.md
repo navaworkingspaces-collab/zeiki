@@ -265,8 +265,8 @@ Template y proceso en [`docs/git.md` §5](../git.md#5-pull-requests). Resumen: d
 3. **Actualizar `.mavis/hdu.md`:** estado, fecha de cierre, link al PR.
 4. **Actualizar `docs/current-state.md`:** marcar la HDU en su nueva sección.
 5. **Actualizar `target-architecture.md` si aplica:** nuevo ADR, anti-patrón nuevo, decisión diferida.
-6. **Migración selectiva** (si aplica): traer del repo anterior lo que valga la pena.
-7. **Quema de archivos legacy** (si aplica): limpiar lo que quedó obsoleto.
+6. **Migración selectiva:** traer del repo anterior lo que valga la pena. **Obligatorio:** el PR incluye una línea que dice "migración selectiva: hice X" o "migración selectiva: no aplica porque Y". No se permite "si aplica" silencioso.
+7. **Quema de archivos legacy:** limpiar lo que quedó obsoleto. **Obligatorio:** el PR incluye una línea que dice "quema de legacy: hice X" o "quema de legacy: no aplica porque Y". Mismo principio.
 8. **Notificar a Hugo:** resumen de qué se hizo, links, follow-ups.
 
 ---
