@@ -526,6 +526,14 @@ Feature flags permiten desplegar código que no se activa para todos.
 
 **Status:** TBD. El test `feature_sync_test.dart` que verifica que el enum y la tabla `app_tier_features` estén sincronizados **no está escrito todavía**. Se documenta como aspiración honesta; no se afirma que existe.
 
+**Documentación auto-generada (aspiración):**
+
+El enum `AppFeature` debería tener un **script que genere automáticamente** `docs/feature-flags.md` desde el código. Sin este script, la documentación de qué features existen se desactualiza inevitablemente.
+
+- **Status:** TBD. Se implementa cuando el sistema de feature flags esté en uso activo (>5 features).
+- **Cómo funcionaría:** un script Deno/Python lee el enum `AppFeature`, lee la tabla `app_tier_features`, y genera un markdown con la matriz.
+- **Cuándo corre:** en CI, en cada PR que toque el enum. Si el markdown generado no se commitea, el CI falla.
+
 ### Cómo se evalúan
 
 ```dart

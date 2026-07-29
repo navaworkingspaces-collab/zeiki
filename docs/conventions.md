@@ -155,6 +155,22 @@ Tres ejemplos suficientes:
 - **Mocks solo donde se necesita:** preferir dobles de prueba simples sobre mocks con `when().thenAnswer()` cuando es viable.
 - **Tests viven con el código:** junto al archivo que prueban, sufijo `_test`.
 
+### Cuándo usar mock vs fake vs stub
+
+| Tipo | Cuándo usarlo | Costo |
+|------|---------------|-------|
+| **Stub** (devuelve valores fijos) | Cuando solo necesitas que el test compile y corra, sin verificar interacciones. | Cero. Sin `mockito` ni `build_runner`. |
+| **Fake** (implementación simple, funcional) | Cuando la dependencia tiene lógica pero no quieres la real (ej. `InMemoryUserRepository` en vez de Supabase). | Cero. Una clase que implementa la interfaz. |
+| **Mock** (verifica interacciones) | Cuando necesitas verificar QUE se llamó un método, con qué argumentos, cuántas veces. | Alto. `mockito` + `build_runner` + `codegen`. Solo si no hay otra forma. |
+
+**Regla práctica:**
+
+- Si el test solo necesita **que la dependencia devuelva algo**: usa **stub** o **fake**.
+- Si el test necesita **verificar que el código llamó a la dependencia correctamente**: usa **mock**.
+- **Nunca** uses mock cuando stub/fake bastan. El costo de `mockito` (build time, complejidad, dependencia) no se justifica para "solo necesito que devuelva X".
+
+**Por qué:** `mockito` agrega `build_runner` y code generation real. No es gratis. La mayoría de los tests de Zeiki pueden usar stubs/fakes; los mocks son la excepción.
+
 ### Naming de tests
 
 Describen comportamiento, no implementación:
