@@ -207,6 +207,33 @@ Todos los tests pasan. Si falla alguno, volver al paso 5.
 
 > **Regla:** si el review encuentra algo fuera del scope, se levanta como HDU nueva, no se arregla en este PR.
 
+### Conventional Comments
+
+Los comentarios del code review usan prefijos de [Conventional Comments](https://conventionalcomments.org) para que el implementer sepa qué priorizar y el reviewer sea explícito sobre la intención.
+
+| Prefijo | Significado | Acción esperada |
+|---------|-------------|------------------|
+| `nit:` | Detalle estético. El autor puede ignorar. | Opcional. |
+| `suggestion:` | Idea alternativa. El autor puede ignorar. | Considerar; ignorar con razón. |
+| `issue:` | Problema que **debe** resolverse antes de mergear. | Obligatorio. |
+| `question:` | Pregunta para entender, no necesariamente bloquea. | Responder. |
+| `thought:` | Reflexión, no acción. | Solo contexto. |
+| `chore:` | Cleanup pequeño que se puede hacer en el mismo PR. | Hacer o crear follow-up. |
+| `praise:` | Reconocimiento. | Ninguna, motivación. |
+
+**Ejemplo:**
+
+```
+issue: esta validación puede ser null si el cliente viene de la migración.
+       Agregar check o documentar por qué es seguro.
+
+nit: el nombre `d` es muy corto, podría ser `durationMs`.
+
+praise: muy limpio el patrón de early return.
+```
+
+**Por qué:** sin prefijos, el implementer no sabe si un comentario es bloqueante o no. Con prefijos, el flujo es explícito.
+
 **Tres gates:**
 
 - **Gate 1 — Clean code:** nombres, funciones con una responsabilidad, sin código muerto, sin magic numbers, sin duplicación, sin TODOs sin issue.
@@ -286,8 +313,8 @@ Una HDU está **terminada** cuando se cumplen TODAS estas condiciones. Cualquier
 - [ ] `hdu.md` actualizado con estado y link.
 - [ ] `current-state.md` actualizado.
 - [ ] `target-architecture.md` actualizado si hubo cambio estructural.
-- [ ] Migración selectiva hecha (si aplica).
-- [ ] Quema de legacy hecha (si aplica).
+- [ ] Migración selectiva: hecha o "no aplica porque Y" explícito en el PR.
+- [ ] Quema de legacy: hecha o "no aplica porque Y" explícito en el PR.
 - [ ] Hugo notificado con resumen + links.
 
 **Si una DoD no se cumple:** la HDU vuelve a `en_progreso` y se asigna a quien pueda cerrarla.
