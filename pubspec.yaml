@@ -42,6 +42,12 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-  # Carga variables de entorno desde assets/.env (conventions §10)
+  # Carga variables de entorno desde assets/.env (conventions §10).
+  # `assets/.env.example` es la plantilla commiteada; `assets/.env` es el
+  # archivo real con valores (en `.gitignore`). Ambos se listan para que
+  # `flutter_dotenv.loadFromAsset('assets/.env')` funcione tanto en dev
+  # (Hugo lo crea antes de `flutter run`) como en build local.
+  # HDU-002.
   assets:
     - assets/.env.example
+    - assets/.env
