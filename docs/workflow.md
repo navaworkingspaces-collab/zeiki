@@ -223,7 +223,7 @@ Todos los tests pasan. Si falla alguno, volver al paso 5.
 
 **Quién:** seiki-pipeline-runner o sesión dedicada.
 
-Comandos específicos del stack viven en `docs/git.md`. Aquí solo el contrato: **TODO debe pasar 0 errores antes de commitear.**
+Comandos específicos del stack viven en [`docs/git.md` §6](../git.md#6-pipeline-local). Aquí solo el contrato: **TODO debe pasar 0 errores antes de commitear.** Pre-condiciones de merge en [`docs/git.md` §3](../git.md#3-merge).
 
 ---
 
@@ -240,7 +240,7 @@ Comandos específicos del stack viven en `docs/git.md`. Aquí solo el contrato: 
 
 ### 10. COMMIT
 
-Convención completa en `docs/conventions.md §1` y en `docs/git.md`. Resumen:
+Convención completa en [`docs/git.md` §2](../git.md#2-commits). Resumen:
 
 ```
 <tipo>(<scope>): <descripción corta> [HDU-XXX]
@@ -254,7 +254,7 @@ Refs: specs/HDU-XXX-slug.md
 
 ### 11. PR
 
-Template y proceso en `docs/git.md`. Resumen: descripción + check de entendimiento + checklist.
+Template y proceso en [`docs/git.md` §5](../git.md#5-pull-requests). Resumen: descripción + check de entendimiento + checklist.
 
 ---
 
