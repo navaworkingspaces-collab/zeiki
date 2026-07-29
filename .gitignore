@@ -1,0 +1,46 @@
+# Flutter
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+build/
+flutter_*.png
+linked*.ds
+unlinked.ds
+unlinked_spec.ds
+.fvm/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Environment
+assets/.env
+*.env.local
+*.env.production
+
+# Coverage
+coverage/
+*.lcov
+
+# Build artifacts
+*.apk
+*.aab
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Misc
+*.log
+*.pid
+*.seed
+*.pid.lock
