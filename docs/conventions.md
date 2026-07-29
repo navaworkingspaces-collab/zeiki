@@ -80,7 +80,7 @@ Un juicio subjetivo en cada PR.
 
 | Tipo | Convención | Ejemplo |
 |------|-----------|--------|
-| Carpetas | `snake_case`, en inglés | `auth/`, `sat_configuration/` |
+| Carpetas | `snake_case`, en inglés (con excepción para `lib/features/`, ver nota abajo) | `auth/`, `sat_configuration/`, `lib/features/identidad/` |
 | Archivos de código | `snake_case.<ext>` | `login_page.dart`, `auth_service.ts` |
 | Archivos de test | `<archivo>_test.<ext>` | `auth_bloc_test.dart` |
 | Specs | `HDU-XXX-slug-descriptivo.md` | `HDU-005-onboarding-flag.md` |
@@ -102,6 +102,12 @@ Un juicio subjetivo en cada PR.
 - Nombres describen intención, no implementación.
 - Getters sin prefijo `get`: `displayName` (no `getDisplayName`).
 - BLoCs (cuando aplique): events en pasado/sustantivo, states como adjetivo/sustantivo, clase con sufijo `Bloc`.
+
+**Excepción documentada — carpetas de features/ en español:**
+
+Las carpetas bajo `lib/features/<dominio>/` van en **español** (no en `snake_case` inglés): `identidad/`, `fiscal/`, `clientes/`, `reportes/`, `asistencia/`, `configuracion/`. Esto sigue la decisión arquitectónica de `target-architecture.md §6` y `ADR-008`. Si un día los nombres de dominio en Target cambian, se actualizan también aquí.
+
+El resto del proyecto (carpetas de `lib/core/`, `test/`, `supabase/`, `assets/`, `docs/`, etc.) sigue `snake_case` en inglés.
 
 ---
 

@@ -1,0 +1,47 @@
+name: zeiki
+description: "Zeiki — App de facturación CFDI 4.0 con descarga masiva de CFDIs del SAT."
+publish_to: "none"
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.10.0
+
+# Dependencias base declaradas en HDU-001 (AC6). Versiones conservadoras (rangos caret).
+# Ver docs/adr/ADR-003-supabase.md, ADR-004-bloc.md, ADR-005-getit.md.
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # State management (ADR-004)
+  flutter_bloc: ^8.1.6
+
+  # Dependency injection (ADR-005)
+  get_it: ^7.7.0
+
+  # Backend (ADR-003)
+  supabase_flutter: ^2.5.6
+
+  # Value equality para entidades y estados
+  equatable: ^2.0.5
+
+  # Almacenamiento seguro de credenciales (eFirma, tokens) — conventions §6
+  flutter_secure_storage: ^9.2.2
+
+  # Variables de entorno (Supabase URL/anon key) — conventions §10
+  flutter_dotenv: ^5.1.0
+
+  # Navegación declarativa. Justificación en HDU-001 §Notas.
+  go_router: ^14.2.7
+
+  cupertino_icons: ^1.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+  # Carga variables de entorno desde assets/.env (conventions §10)
+  assets:
+    - assets/.env.example
