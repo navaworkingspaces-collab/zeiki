@@ -21,6 +21,36 @@ Zeiki se encuentra en la **Fase 1 (MVP)** del roadmap arquitectónico. La reescr
 
 ---
 
+## 🧭 §0. Filosofía del proyecto
+
+> **Esta sección es la fuente única de los principios filosóficos del proyecto.** Los demás documentos (`conventions.md`, `workflow.md`, `git.md`) referencian aquí, no duplican.
+
+### NO INFERENCIA, SOLO PRUEBAS
+
+> **Nunca digas "probablemente pasa X" o "debe ser Y" sin evidencia.** Cita el código exacto: archivo, línea, método, snippet. Si no puedes demostrarlo, márcalo como hipótesis explícita con su plan de verificación.
+>
+> Aplica a debugging, code review, debates técnicos, reportes a Hugo, ADRs, investigación, **todo**.
+
+**Por qué:** la inferencia lleva a fixes incorrectos, erosiona confianza, y bloquea que las sesiones futuras verifiquen claims. Los equipos de infraestructura grandes arreglan evidencia, no hipótesis.
+
+**Cómo se aplica:**
+
+- **Debugging:** cada claim con `archivo:línea` y evidencia (test, log, output).
+- **Code review:** "esto se rompe si X" requiere un test que lo demuestre, no una corazonada.
+- **Debates técnicos:** "debemos usar Y" requiere evidencia de que resuelve un problema real, no que suena bien.
+- **ADRs:** las justificaciones citan evidencia (mediciones, casos, alternativas evaluadas).
+- **Reportes a Hugo:** si no puedes demostrar algo, dilo explícitamente como hipótesis.
+
+**Cuándo SÍ se permite hipótesis:**
+
+- Explícitamente marcada como "hipótesis a verificar:".
+- Con el código/línea que la generaría.
+- Con plan de verificación (qué test correr, qué log capturar).
+
+---
+
+---
+
 ## 🧭 Mapa del negocio
 
 Antes de hablar de capas o de features, hay que entender **qué es Zeiki en su esencia**. Esta sección es el "corazón" del producto. Todo lo demás del documento existe para soportar este flujo.

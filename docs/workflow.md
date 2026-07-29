@@ -8,9 +8,9 @@
 
 ## 🧭 Filosofía
 
-> **NO INFERENCIA, SOLO PRUEBAS** (filosofía del proyecto, no solo de debugging)
+> El workflow de Zeiki sigue la **filosofía del proyecto definida en [Target Architecture §0](../architecture/target-architecture.md#0-filosofía-del-proyecto)**. Este documento la aplica al proceso de trabajo, no la duplica.
 >
-> Nunca digas "probablemente pasa X" sin evidencia. Cita el código exacto: archivo, línea, método. Si no puedes demostrarlo, es hipótesis, no conclusión. Aplica a debugging, code review, debates técnicos, todo.
+> **Resumen:** **NO INFERENCIA, SOLO PRUEBAS.** Aplica a debugging, code review, debates técnicos, ADRs, investigación, todo. Sin duplicación entre documentos.
 
 1. **Planos antes de código:** toda HDU que toque estructura, dominio o sistema externo arranca con un spec chiquito aprobado por Hugo.
 2. **Test primero, código después:** TDD estricto para flujos críticos.

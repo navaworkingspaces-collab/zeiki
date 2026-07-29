@@ -16,13 +16,9 @@
 
 ## 🧭 Filosofía
 
-### NO INFERENCIA, SOLO PRUEBAS (filosofía del proyecto, no solo de debugging)
-
-> **Nunca digas "probablemente pasa X" o "debe ser Y" sin evidencia.** Cita el código exacto: archivo, línea, método, snippet. Si no puedes demostrarlo, márcalo como hipótesis explícita con su plan de verificación.
+> Las convenciones y la operación de Zeiki siguen la **filosofía del proyecto definida en [Target Architecture §0](../architecture/target-architecture.md#0-filosofía-del-proyecto)**. Este documento la aplica al código, no la duplica.
 >
-> Aplica a debugging, code review, debates técnicos, reportes a Hugo, ADRs, investigación, todo.
-
-**Por qué:** la inferencia lleva a fixes incorrectos, erosiona confianza, y bloquea que las sesiones futuras verifiquen claims. Los equipos de infraestructura grandes arreglan evidencia, no hipótesis.
+> **Resumen:** **NO INFERENCIA, SOLO PRUEBAS.** Nunca "probablemente pasa X" sin evidencia. Cita el código con `archivo:línea`. Si no puedes demostrarlo, es hipótesis, no conclusión.
 
 ---
 
