@@ -35,17 +35,37 @@ void main() {
     await dotenv.load(fileName: 'assets/.env');
     final env = EnvConfig.fromDotEnv(dotenv);
     await initSupabase(env);
+
+    // CRÍTICO: registra el `TierService` en GetIt.
+    //
+    // Los integration tests NO arrancan la app completa — solo hacen
+    // `IntegrationTestWidgetsFlutterBinding.ensureInitialized()`, por
+    // lo que `main.dart` NUNCA corre y `setupServiceLocator()` no se
+    // llama automáticamente. Sin esta línea, el primer
+    // `TierService.getInstance()` de los tests lanza
+    // `GetIt: Object/factory with type TierService is not registered
+    // inside GetIt`.
+    //
+    // **NO QUITAR.** Si parece redundante, leer el comentario de arriba.
     setupServiceLocator();
   });
 
-  // Reset entre tests: el singleton conserva el cache, pero queremos
-  // verificar que cada test empieza con un refresh limpio.
+  // Reset entre tests: el singleton conserva el cache y su
+  // `StreamController` (cerrado tras `dispose()`), pero queremos
+  // verificar que cada test arranca con un `TierService` fresco.
+  //
+  // Flujo: si hay un singleton del test anterior, lo disposeamos
+  // (cierra el controller). Después `getIt.reset()` borra el registro.
+  // Después `setupServiceLocator()` re-registra la factory lazy para
+  // que el test que sigue la instancie de cero. `setupServiceLocator`
+  // es idempotente (chequea `isRegistered` antes de registrar), así
+  // que se puede llamar siempre sin miedo.
   setUp(() {
     if (getIt.isRegistered<TierService>()) {
       getIt<TierService>().dispose();
-      getIt.reset();
-      setupServiceLocator();
     }
+    getIt.reset();
+    setupServiceLocator();
   });
 
   test('refresh real actualiza el cache con `splash=true` (AC8)', () async {
