@@ -11,8 +11,9 @@
 //
 // La función `wireDeepLinks` devuelve una `StreamSubscription` que el
 // caller debe cancelar cuando la app se cierre (en `main.dart` no es
-// necesario porque la suscripción vive lo que vive la app, pero en
-// tests se cancela en `tearDown`).
+// necesario porque la suscripción vive lo que vive la app). En tests
+// se inyecta un `Stream<Uri>` controlado y se limpia el `StreamController`
+// en `addTearDown`; la subscription a ese stream se cancela también ahí.
 import 'dart:async';
 
 import 'package:app_links/app_links.dart';

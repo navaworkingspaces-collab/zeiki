@@ -68,11 +68,10 @@ Future<void> main() async {
 
   // HDU-004 AC5: cablea los deep links `zeiki://<ruta>` al router.
   // Se hace DESPUÉS de `runApp` para que el router ya esté montado
-  // cuando llegue el primer intent. La suscripción se descarta
-  // intencionalmente: vive lo que vive el proceso (los tests sí la
-  // capturan para cancelarla).
-  // ignore: unused_local_variable
-  final deepLinkSub = wireAppLinksDeepLinks(appRouter);
+  // cuando llegue el primer intent. La suscripción NO se captura: vive
+  // lo que vive el proceso (los tests sí la capturan para cancelarla
+  // y verificar el deep link end-to-end).
+  wireAppLinksDeepLinks(appRouter);
 }
 
 class ZeikiApp extends StatelessWidget {
