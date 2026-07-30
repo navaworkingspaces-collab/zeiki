@@ -386,8 +386,9 @@ Si la respuesta a las 4 es "no, sí, sí, no" — busca una alternativa. Si desp
 
 ### Reglas
 
-- **Nombre de archivo:** `YYYYMMDD_HHMMSS_<slug-descriptivo>.sql` (timestamp + slug).
-  - Ejemplo: `20260729_143000_add-sat-cfdis-index.sql`.
+- **Nombre de archivo:** `YYYYMMDDHHMMSS_<slug-descriptivo>.sql` (timestamp de 14 dígitos + slug).
+  - Ejemplo: `20260729143000_add-sat-cfdis-index.sql`.
+  - El formato es el que espera la CLI de Supabase (`YYYYMMDDHHMMSS`, sin guión bajo). El `version` que se inserta en `supabase_migrations.schema_migrations` se deriva del nombre del archivo; un guión bajo rompe el versionado.
   - El orden lexicográfico es el orden de ejecución. Timestamp asegura unicidad.
 - **Ubicación:** `supabase/migrations/` (convención de Supabase CLI).
 - **Idempotencia obligatoria:** usar `IF NOT EXISTS` en CREATE, `IF EXISTS` en DROP, `ON CONFLICT DO NOTHING` en INSERT.

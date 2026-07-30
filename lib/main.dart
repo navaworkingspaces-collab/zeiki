@@ -3,11 +3,37 @@
 // HDU-001: base del proyecto. La app solo muestra un placeholder para
 // confirmar que el ciclo de vida de Flutter funciona. Sin splash real, sin
 // navegación, sin features. Esas llegan en HDUs posteriores.
+//
+// HDU-002: se inicializa el cliente de Supabase antes de `runApp` para
+// que cualquier feature que lo necesite pueda usarlo desde el primer
+// frame. El `.env` se carga como asset del bundle y se mapea a un
+// `EnvConfig` tipo-seguro. Si falta una variable requerida, la app
+// falla rápido con un mensaje claro (conventions §10 + spec HDU-002).
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-void main() async {
+import 'core/constants/env_config.dart';
+import 'core/supabase/supabase_client.dart';
+
+Future<void> main() async {
   // Asegura el binding antes del await para no perder el primer frame.
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Carga `assets/.env` desde el asset bundle. Falla rápido si el
+  // archivo no está — en dev, Hugo lo crea antes de `flutter run`
+  // (ver `docs/runbooks/secrets.md` y spec HDU-002 §Riesgos).
+  // `flutter_dotenv 5.x` unificó `loadFromAsset` en `load(fileName: ...)`;
+  // el parámetro acepta la ruta completa del asset (prefijo `assets/`).
+  await dotenv.load(fileName: 'assets/.env');
+
+  // Mapea el `.env` a un objeto tipo-seguro. Si falta SUPABASE_URL o
+  // SUPABASE_ANON_KEY, lanza `ArgumentError` con mensaje accionable.
+  final env = EnvConfig.fromDotEnv(dotenv);
+
+  // Inicializa el cliente de Supabase. Si la URL es inválida o la red
+  // está caída, `Supabase.initialize` lanza — preferimos crash con
+  // stack trace a "la app abre y todo falla en silencio".
+  await initSupabase(env);
 
   // HDU-001 AC5: el placeholder debe ser visible por al menos 1 segundo.
   // Este delay es solo para confirmar el ciclo de vida — NO es splash real.

@@ -1,0 +1,10 @@
+{
+  "imports": {
+    "@supabase/supabase-js": "npm:@supabase/supabase-js@2.39.7",
+    "std/assert/": "https://deno.land/std@0.224.0/assert/"
+  },
+  "tasks": {
+    "check": "deno check index.ts",
+    "test": "deno test --allow-read --allow-env"
+  }
+}

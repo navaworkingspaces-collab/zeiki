@@ -18,8 +18,12 @@ dependencies:
   # Dependency injection (ADR-005)
   get_it: ^7.7.0
 
-  # Backend (ADR-003)
-  supabase_flutter: ^2.5.6
+  # Backend (ADR-003). Mínimo `^2.13.0` porque usamos `publishableKey:`
+  # (renombre de `anonKey:` introducido en 2.13.0 — ver changelog oficial).
+  # Antes era `^2.5.6`, lo que permitía downgradear a <2.13.0 si se borraba
+  # el lockfile; el código no compilaría sin el rename. Subido en
+  # zeiki-auditor fix (HDU-002).
+  supabase_flutter: ^2.13.0
 
   # Value equality para entidades y estados
   equatable: ^2.0.5
@@ -38,10 +42,20 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  # Integration tests (requerido por `flutter test integration_test/`).
+  # Bug del implementer de HDU-002: faltaba la dependencia.
+  integration_test:
+    sdk: flutter
   flutter_lints: ^5.0.0
 
 flutter:
   uses-material-design: true
-  # Carga variables de entorno desde assets/.env (conventions §10)
+  # Carga variables de entorno desde assets/.env (conventions §10).
+  # `assets/.env.example` es la plantilla commiteada; `assets/.env` es el
+  # archivo real con valores (en `.gitignore`). Ambos se listan para que
+  # `flutter_dotenv.loadFromAsset('assets/.env')` funcione tanto en dev
+  # (Hugo lo crea antes de `flutter run`) como en build local.
+  # HDU-002.
   assets:
     - assets/.env.example
+    - assets/.env
