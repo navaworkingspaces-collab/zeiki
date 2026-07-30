@@ -33,7 +33,8 @@ enum AppFeature {
   /// datos en la BD con este valor.
   final String name;
 
-  /// Documenta el propósito del feature. Aparece en logs, en la doc
-  /// auto-generada y en mensajes de error.
+  /// Documenta el propósito del feature. Aparece en logs y en mensajes
+  /// de error. Aparecerá también en la doc auto-generada cuando se
+  /// implemente la CLI de `feature_manifest` (Target §15, aspiración).
   final String description;
 }

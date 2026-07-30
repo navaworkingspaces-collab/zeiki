@@ -204,7 +204,13 @@ class TierService {
 
   /// Cierra el stream. Solo para tests y para `dispose()` global. NO
   /// llamar desde código de feature.
+  ///
+  /// Idempotente: si ya estaba cerrado, no hace nada. Esto protege
+  /// contra doble `dispose()` desde `tearDown` encadenados o re-entry
+  /// en `getIt.reset()` + re-registro. Cubierto por el test
+  /// `dispose() es idempotente: llamar dos veces no lanza`.
   void dispose() {
+    if (_controller.isClosed) return;
     _controller.close();
   }
 }

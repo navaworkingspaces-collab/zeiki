@@ -303,6 +303,15 @@ void main() {
       expect(service.dispose, returnsNormally);
     });
 
+    test('es idempotente: llamar dispose() dos veces no lanza', () {
+      final service = makeService(fetcher: fakeFetcher());
+      service.dispose();
+      // Segunda llamada no debe lanzar `StateError: Cannot close a
+      // closed StreamController`. Es un guard defensivo: cuesta 1
+      // línea y protege contra doble dispose en tearDown encadenados.
+      expect(service.dispose, returnsNormally);
+    });
+
     test('después de dispose, el stream está cerrado', () async {
       final service = makeService(fetcher: fakeFetcher());
 
