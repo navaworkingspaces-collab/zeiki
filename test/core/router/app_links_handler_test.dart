@@ -119,6 +119,12 @@ class _StubScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text('stub-$label');
+    // Envoltorio en `Directionality` para que el `Text` tenga el
+    // ancestor obligatorio y el test no rompa si alguien lo extiende
+    // para verificar el widget (Gate 1 — clean code, pre-merge chore).
+    return Directionality(
+      textDirection: TextDirection.ltr,
+      child: Text('stub-$label'),
+    );
   }
 }
