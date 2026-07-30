@@ -2,17 +2,18 @@
 
 > **Snapshot rápido del estado del proyecto.** Se actualiza en el cleanup (paso 12) de cada HDU cerrada. Para el detalle de una HDU específica, ver `specs/HDU-XXX-*.md`. Para el histórico, ver `.mavis/hdu.md`.
 
-**Última actualización:** 2026-07-29 (post-HDU-EXPLORE-001 cerrada).
+**Última actualización:** 2026-07-30 (post-HDU-002 cerrada).
 
 ---
 
 ## 📍 Dónde estamos
 
 - **Fase:** 1 (MVP).
-- **Última HDU cerrada:** HDU-EXPLORE-001 — Exploración del splash legacy.
+- **Última HDU cerrada:** HDU-002 — Setup de Supabase.
 - **HDUs activas:** ninguna.
 - **Rama `main`:** deployable.
-- **Stack operativo:** Flutter 3.38.3 + Supabase (pendiente de credenciales) + Deno para edge functions (pendiente).
+- **Stack operativo:** Flutter 3.38.3 + Supabase (proyecto Zeiki, región `us-east-2`) + Deno para edge functions.
+- **Proyecto Supabase:** ref `iocbqjzmoneulydmeavr`, URL `https://iocbqjzmoneulydmeavr.supabase.co`. Config en `assets/.env` (en `.gitignore`).
 
 ## ✅ HDUs cerradas recientemente
 
@@ -29,12 +30,23 @@
 - **Lección:** el legacy es **referencia, no verdad**. Lo que el legacy "ya tiene arreglado" no es vinculante sin verificación propia.
 - Las HDU-EXPLORE-002 (decisiones de marca) y HDU-EXPLORE-003 (diseño del feature flag system) propuestas por el agente de la sesión **se descartan** por decisión del orquestador. Se diseñan las decisiones en specs directos.
 
+### HDU-002 — Setup de Supabase (2026-07-30)
+- PR #3 mergeado a main.
+- Crea la base del backend de Supabase: tabla `app_tier_features` con RLS, seed inicial, edge function `feature-flags` que devuelve los flags, e inicialización del cliente Dart.
+- **3 migraciones SQL idempotentes** aplicadas: schema + RLS, seed, GRANTs.
+- **1 edge function** deployada con `--no-verify-jwt` (los flags son datos del producto, no del usuario).
+- **Pipeline end-to-end verificado en Xiaomi:** 1 widget + 6 Deno + 4 integration (1 health + 4 RLS negativos + 1 edge function) tests pasan. `flutter analyze` 0, build APK OK.
+- Crea `docs/runbooks/secrets.md` (runbook de gestión de secretos).
+- **Cierres de auditoría (regla 7):** RLS verificada con tests negativos (commit `7c1df9d`), constraint `supabase_flutter` subido a `^2.13.0` (commit `074cc5d`), `conventions.md §12` corregido sobre formato de migraciones (commit `899f290`).
+- **Bugs del implementer capturados en cleanup:** dep `integration_test` faltante en `pubspec.yaml`, formato de migraciones con guión bajo, GRANTs de Postgres faltantes. Todos resueltos antes del merge.
+- **Aprobado por el zeiki-reviewer** (3 gates: clean code, security, architecture). 6 follow-ups no bloqueantes registrados.
+
 ## 🔜 Próximos pasos sugeridos (secuencia decidida con Hugo)
 
-- **HDU-002:** Sistema de feature flags (Target §10 + ADR-010 + ADR-005). Base para que el splash y otras features nazcan con flag desde el día 1. Owner: técnico.
-- **HDU-003:** `go_router` + navegación básica (rutas reales, no solo el placeholder de HDU-001).
-- **HDU-004:** Identidad / auth básico (mock primero si Supabase no está listo; RLS + magic link si está).
-- **HDU-005:** Splash nuevo con feature flag, go_router y auth mínimo. Spec redactado con base en el reporte de HDU-EXPLORE-001.
+- **HDU-003:** Feature flag system del cliente (TierService con cache local + sync periódico con la edge function). Habilita el flag `AppFeature.splash`. Owner: técnico.
+- **HDU-004:** `go_router` + navegación básica (rutas reales: splash → onboarding → login → home).
+- **HDU-005:** Identidad / auth básico (email + Google + biometría, según Target §15).
+- **HDU-006:** Splash nuevo, con feature flag + go_router + auth mínimo. Spec redactado con base en el reporte de HDU-EXPLORE-001 (qué migrar, qué descartar, qué mejorar).
 
 ## 🐛 Follow-ups activos (de HDUs cerradas)
 
@@ -44,7 +56,10 @@
 | 2 | HDU-001 | Si vuelven a salir warnings de Gradle Java 8, abrir HDU para subir target a Java 11/17. | baja | watch (no se reprodujeron) |
 | 3 | HDU-001 | 27 paquetes de `pub get` con updates disponibles. NO actualizar a ciegas — HDU dedicada de "actualizar deps base" cuando se decida. | baja | pendiente |
 | 4 | HDU-001 | Documentar `assets/.env.example` no se incluye como asset cuando se conecte Supabase (usar `--dart-define-from-file`). | media | en próxima HDU de Identidad |
-| 5 | HDU-EXPLORE-001 | Splash nuevo depende de feature flags + go_router + auth. No implementar antes de tener esos 3. | alta | bloqueante para HDU-005 |
+| 5 | HDU-EXPLORE-001 | Splash nuevo depende de feature flags + go_router + auth. No implementar antes de tener esos 3. | alta | bloqueante para HDU-006 |
+| 6 | HDU-002 | `Future.delayed(1s)` en `main.dart` es residuo de HDU-001. Quitarlo cuando llegue HDU-004 (go_router) o HDU-005 (auth). | baja | pendiente |
+| 7 | HDU-002 | Edge function usa `service_role` + `--no-verify-jwt`. OK hoy (flags del producto), revisar cuando se agreguen flags por usuario. | media | observation (Target §13.1) |
+| 8 | HDU-002 | Refactor: extraer `setUpAll` duplicado en 3 integration tests a helper compartido cuando se agreguen más tests en HDU-003. | baja | nit (HDU-003) |
 
 ## 📚 Lecciones aprendidas recientes
 
