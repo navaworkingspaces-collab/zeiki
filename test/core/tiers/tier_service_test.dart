@@ -320,5 +320,63 @@ void main() {
           reason: 'el stream debe cerrar cuando se llama dispose()');
       await sub.cancel();
     });
+
+    test(
+        'race condition: dispose() durante refresh() NO lanza '
+        '"Cannot add new events after calling close"', () async {
+      // Fetcher lento: el test decide cuándo responde. Mientras el
+      // fetcher espera, podemos llamar `dispose()` para cerrar el
+      // controller. Cuando el fetcher responda, el `refresh()` debe
+      // completar sin lanzar.
+      final fetcherCompleter = Completer<Map<String, dynamic>>();
+      final service = makeService(fetcher: () => fetcherCompleter.future);
+
+      // Disparar el refresh en background (no `await`).
+      final refreshFuture = service.refresh();
+
+      // Pequeño yield para que el `refresh()` llegue al `await _fetcher()`
+      // y se quede ahí bloqueado. Sin esto, el `fetcher` podría resolverse
+      // antes de que llamemos `dispose()` y el test no estaría probando
+      // la race condition.
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+
+      // Ahora sí: cerrar el stream mientras el refresh está esperando.
+      service.dispose();
+
+      // Completar el fetcher. El refresh va a intentar emitir al
+      // controller cerrado — sin el guard, lanza
+      // `Bad state: Cannot add new events after calling close`. Con
+      // el guard, completa sin lanzar.
+      fetcherCompleter.complete({'flags': {'splash': true}});
+
+      // El refresh debe completar sin throw.
+      await expectLater(refreshFuture, completes,
+          reason: 'refresh() no debe lanzar aunque el controller esté '
+              'cerrado (cubierto por el guard `isClosed`)');
+    });
+
+    test(
+        'race condition: dispose() durante refresh() fallido NO lanza '
+        'en el addError', () async {
+      // Variante del test anterior: el fetcher lanza (red caída) en vez
+      // de devolver éxito. El `refresh()` debe catch + addError. Con el
+      // guard, el addError se salta si el controller está cerrado.
+      final fetcherCompleter = Completer<Map<String, dynamic>>();
+      final service = makeService(fetcher: () => fetcherCompleter.future);
+
+      final refreshFuture = service.refresh();
+
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+      service.dispose();
+
+      fetcherCompleter.completeError(
+        const FormatException('network down'),
+      );
+
+      // Igual: el refresh debe completar sin throw.
+      await expectLater(refreshFuture, completes,
+          reason: 'refresh() no debe lanzar aunque el addError vaya a '
+              'un controller cerrado (cubierto por el guard `isClosed`)');
+    });
   });
 }

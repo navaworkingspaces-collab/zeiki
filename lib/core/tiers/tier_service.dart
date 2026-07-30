@@ -131,6 +131,15 @@ class TierService {
   /// `force` se reserva para uso futuro (HDU de "refresh manual
   /// desde configuración") — en HDU-003 no se usa, siempre refresh
   /// si se llama.
+  ///
+  /// **Race condition con `dispose()`:** si el caller llama
+  /// `dispose()` mientras el `await _fetcher()` está pendiente, el
+  /// controller queda cerrado. Cuando el fetcher responde, este método
+  /// intenta emitir al controller cerrado y lanza
+  /// `Bad state: Cannot add new events after calling close`. Por eso
+  /// cada `add` / `addError` va guardado con `_controller.isClosed`
+  /// (cubierto por el test de regression en
+  /// `test/core/tiers/tier_service_test.dart`).
   Future<void> refresh({bool force = false}) async {
     try {
       final body = await _fetcher();
@@ -141,6 +150,10 @@ class TierService {
       debugPrint('TierService: refresh failed, keeping previous cache: $e');
       // `addError` para que listeners que quieran reaccionar a fallos
       // puedan hacerlo. Por ahora nadie lo usa.
+      // Guard: si `dispose()` se llamó mientras el fetcher esperaba,
+      // el controller ya está cerrado. NO emitimos — no hay nadie
+      // escuchando y emitir lanzaría `Bad state`.
+      if (_controller.isClosed) return;
       _controller.addError(e, st);
     }
   }
@@ -174,6 +187,10 @@ class TierService {
       final oldValue = _cache[entry.key] ?? false;
       if (entry.value != oldValue) {
         _cache[entry.key] = entry.value;
+        // Guard: si `dispose()` se llamó mientras el `await _fetcher()`
+        // estaba pendiente, el controller ya está cerrado. NO emitimos
+        // — no hay nadie escuchando y emitir lanzaría `Bad state`.
+        if (_controller.isClosed) return;
         _controller.add(
           TierChange(
             feature: entry.key,
