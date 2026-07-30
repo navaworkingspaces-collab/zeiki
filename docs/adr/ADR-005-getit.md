@@ -37,7 +37,7 @@ Zeiki tiene servicios que se usan en múltiples features (auth, datasources de S
 
 ## Excepciones documentadas
 
-- **`TierService`** NO se registra en `sl` porque es state global cross-cutting (mismo patrón que `AuthStateChangeNotifier`). Sigue el principio de "state global va aparte, dependencia inyectable va en GetIt".
+- **`TierService`** SÍ se registra en `sl` como singleton lazy desde `lib/core/di/service_locator.dart`. La excepción original (state global cross-cutting) se revirtió en la práctica por la HDU-003 — la decisión revertida está documentada en el ahora-deprecado [ADR-010](deprecated/ADR-010-tier-service.md) y la nueva decisión en [ADR-011](ADR-011-tier-service-getit-registration.md).
 - **`AuthBloc` y otros BLoCs de lifecycle de app** se registran como factory para que cada `BlocProvider` cree su propia instancia.
 
 ## Cuándo se revisa
