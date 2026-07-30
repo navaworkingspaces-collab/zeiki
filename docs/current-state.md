@@ -2,14 +2,14 @@
 
 > **Snapshot rápido del estado del proyecto.** Se actualiza en el cleanup (paso 12) de cada HDU cerrada. Para el detalle de una HDU específica, ver `specs/HDU-XXX-*.md`. Para el histórico, ver `.mavis/hdu.md`.
 
-**Última actualización:** 2026-07-30 (post-HDU-002 cerrada).
+**Última actualización:** 2026-07-30 (post-HDU-003 cerrada).
 
 ---
 
 ## 📍 Dónde estamos
 
 - **Fase:** 1 (MVP).
-- **Última HDU cerrada:** HDU-002 — Setup de Supabase.
+- **Última HDU cerrada:** HDU-003 — Feature flag system del cliente.
 - **HDUs activas:** ninguna.
 - **Rama `main`:** deployable.
 - **Stack operativo:** Flutter 3.38.3 + Supabase (proyecto Zeiki, región `us-east-2`) + Deno para edge functions.
@@ -41,10 +41,21 @@
 - **Bugs del implementer capturados en cleanup:** dep `integration_test` faltante en `pubspec.yaml`, formato de migraciones con guión bajo, GRANTs de Postgres faltantes. Todos resueltos antes del merge.
 - **Aprobado por el zeiki-reviewer** (3 gates: clean code, security, architecture). 6 follow-ups no bloqueantes registrados.
 
+### HDU-003 — Feature flag system del cliente (2026-07-30)
+- PR #4 mergeado a main.
+- Singleton `TierService` con cache en memoria, integración con la edge function `feature-flags` de Supabase, y enum `AppFeature` type-safe que la UI consulta sin strings sueltos.
+- **7 commits en la rama `feat/hdu-003-feature-flag-system`:** spec → implementación → fix race condition → tests → 2 doc fixes (auditor) → 2 chores pre-merge (reviewer: dispose idempotente + governance de ADRs).
+- **15 archivos modificados/creados** (4 nuevos en `lib/core/tiers/`, 1 en `lib/core/di/`, 5 integration tests, 3 unit tests, spec, `lib/main.dart` actualizado).
+- **Pipeline local verificado en Xiaomi:** `flutter analyze` 0, 28/28 unit tests verde, **10/10 integration tests** verde (incluyendo `tier_service_sync_test` que valida la race condition fix), build APK OK.
+- **Aprobado por el `zeiki-auditor`** — veredicto "Limpio con notas" (2 follow-ups de docs aplicados en el PR).
+- **Aprobado por el `zeiki-reviewer`** — veredicto "🟡 Aprobado con cambios" (0 bloqueantes, 1 `issue:` de governance de ADRs resuelto inline + chores aplicados).
+- **Governance de ADRs formalizada en el mismo PR:** `ADR-010` movido a `deprecated/`, nuevo `ADR-011-tier-service-getit-registration.md` documenta la decisión de registrar `TierService` en GetIt, `ADR-005` actualizado con la nueva excepción, tabla §13 de Target refrescada.
+- **Bugs del implementer capturados en cleanup:** race condition con `dispose()` durante `refresh()` async (fix: guard `isClosed` antes de `_controller.add()`). Cubierto con 2 regression tests.
+- **5 follow-ups no bloqueantes registrados en `.mavis/hdu.md`** (helper de `registerLazySingleton`, conectar `refreshInterval` con `Timer.periodic`, sanitizar `debugPrint`, loggear tipos no-bool en `_parseFlags`, CLI `feature_manifest`).
+
 ## 🔜 Próximos pasos sugeridos (secuencia decidida con Hugo)
 
-- **HDU-003:** Feature flag system del cliente (TierService con cache local + sync periódico con la edge function). Habilita el flag `AppFeature.splash`. Owner: técnico.
-- **HDU-004:** `go_router` + navegación básica (rutas reales: splash → onboarding → login → home).
+- **HDU-004:** `go_router` + navegación básica (rutas reales: splash → onboarding → login → home). Depende de HDU-003 ✅.
 - **HDU-005:** Identidad / auth básico (email + Google + biometría, según Target §15).
 - **HDU-006:** Splash nuevo, con feature flag + go_router + auth mínimo. Spec redactado con base en el reporte de HDU-EXPLORE-001 (qué migrar, qué descartar, qué mejorar).
 
@@ -59,7 +70,12 @@
 | 5 | HDU-EXPLORE-001 | Splash nuevo depende de feature flags + go_router + auth. No implementar antes de tener esos 3. | alta | bloqueante para HDU-006 |
 | 6 | HDU-002 | `Future.delayed(1s)` en `main.dart` es residuo de HDU-001. Quitarlo cuando llegue HDU-004 (go_router) o HDU-005 (auth). | baja | pendiente |
 | 7 | HDU-002 | Edge function usa `service_role` + `--no-verify-jwt`. OK hoy (flags del producto), revisar cuando se agreguen flags por usuario. | media | observation (Target §13.1) |
-| 8 | HDU-002 | Refactor: extraer `setUpAll` duplicado en 3 integration tests a helper compartido cuando se agreguen más tests en HDU-003. | baja | nit (HDU-003) |
+| 8 | HDU-002 | Refactor: extraer `setUpAll` duplicado en 3 integration tests a helper compartido cuando se agreguen más tests en HDU-003. | baja | **completado** (test 8 dedicado) |
+| 9 | HDU-003 | Helper `registerLazySingletonIfNotRegistered<T>(factory)` para no repetir el patrón en futuros servicios (`AuthService`, `BiometricService`, etc.). | baja | pendiente (HDU futura) |
+| 10 | HDU-003 | Conectar `tier_service_config.refreshInterval` con `Timer.periodic` cuando llegue la HDU de refresh automático. | baja | pendiente (HDU futura) |
+| 11 | HDU-003 | `debugPrint` con la excepción en `refresh()` — sanitizar cuando el fetcher reciba más contexto (HDU-005 con auth). | baja | observation |
+| 12 | HDU-003 | `_parseFlags` ignora tipos no-bool silenciosamente — loggear con `debugPrint` cuando se ignore un valor. | baja | pendiente (HDU futura) |
+| 13 | HDU-003 | CLI `feature_manifest` (Target §15, aspiración) — genera doc auto-generada a partir del enum `AppFeature`. | baja | aspiración (Target §15) |
 
 ## 📚 Lecciones aprendidas recientes
 

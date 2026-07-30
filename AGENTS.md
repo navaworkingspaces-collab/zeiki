@@ -2,7 +2,7 @@
 
 > **Bootstrap de sesión.** Mavis (o cualquier agente) lee este archivo **PRIMERO** al abrir una sesión en este proyecto. Sin leer el resto del repo, este archivo da el contexto mínimo para no perderse.
 >
-> **Última actualización:** 2026-07-30 (post-HDU-002)
+> **Última actualización:** 2026-07-30 (post-HDU-003)
 
 ---
 
@@ -10,7 +10,7 @@
 
 - **Nombre:** Zeiki (con Z). **Cero "Seiki"** — el proyecto legacy es `seiki_app`, no se mezclan.
 - **Qué es:** App móvil (Flutter) para facturación CFDI 4.0 en México. Reescritura desde cero.
-- **Estado:** Fase 1 — MVP. **Código base + backend Supabase listos** (HDU-001 y HDU-002 cerradas).
+- **Estado:** Fase 1 — MVP. **Código base + backend Supabase + feature flag system del cliente listos** (HDU-001, HDU-002 y HDU-003 cerradas).
 - **Stack:** Flutter 3.38.3 + Supabase (Postgres + Auth + Edge Functions) + Deno para edge functions. Detalle en `target-architecture.md`.
 - **Sin clientes en producción** → no hay riesgo de "valle" en la reescritura.
 
@@ -40,7 +40,6 @@ Después de leer esos 5:
 
 - **No hay HDUs abiertas.** Cero. Si quieres abrir una, créala con el spec chiquito del `workflow.md §2`.
 - **No hay agente `zeiki-pipeline-runner` todavía** (workflow §8 lo referencia). Se crea cuando se configure CI.
-- **No hay feature flag system en el cliente todavía** (HDU-003 lo va a hacer).
 
 ---
 
@@ -53,7 +52,7 @@ Después de leer esos 5:
 - **Tracking de HDUs:** `.mavis/hdu.md` (local, en `.gitignore`).
 - **Snapshot del estado:** `docs/current-state.md` (commiteado, en repo).
 - **Agentes del orquestador:** `zeiki-implementer`, `zeiki-auditor`, `zeiki-reviewer` en `C:\Users\Pc\.minimax\agents\`.
-- **Documentación completa:** Target Architecture, Conventions, Workflow, Git, 10 ADRs, 1 plantilla (HDU-EXPLORE).
+- **Documentación completa:** Target Architecture, Conventions, Workflow, Git, 11 ADRs (ADR-010 deprecated, movido a `deprecated/`), 1 plantilla (HDU-EXPLORE).
 - **Repositorio legacy** `navaworkingspaces-collab/seiki_app` en **read-only indefinido** como respaldo histórico.
   - **Para qué sirve:** consultar algoritmos validados, integraciones probadas, reglas de negocio aprendidas.
   - **Qué NO se hace:** no se commitea ahí, no se reabren HDUs cerradas, no se traen tareas como activas.
