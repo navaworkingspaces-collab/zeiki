@@ -37,6 +37,13 @@ dependencies:
   # Navegación declarativa. Justificación en HDU-001 §Notas.
   go_router: ^14.2.7
 
+  # Deep links para Android (intent filters). go_router 14.x lo usa
+  # internamente para que `zeiki://<ruta>` llegue al router como
+  # `/<ruta>`. Aunque viene como transitive de go_router, lo declaramos
+  # explícito para que figure en la lista de deps del proyecto
+  # (conventions §11: deps explícitas, no implícitas).
+  app_links: ^7.0.0
+
   cupertino_icons: ^1.0.8
 
 dev_dependencies:
