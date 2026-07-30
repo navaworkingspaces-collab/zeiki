@@ -6,4 +6,4 @@ Aquí vivirá el `service_locator.dart` que registra los singletons y factories 
 
 **Regla:** todos los features consumen dependencias vía `getIt<T>()`, nunca instancian directamente.
 
-**Estado:** vacío. Se llena cuando la primera feature (Identidad) necesite servicios.
+**Estado:** contiene `service_locator.dart` con `setupServiceLocator()` (registra `TierService` como singleton lazy, ver ADR-005 y ADR-010). [HDU-003]

@@ -13,7 +13,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'core/constants/env_config.dart';
+import 'core/di/service_locator.dart';
 import 'core/supabase/supabase_client.dart';
+import 'core/tiers/tier_service.dart';
 
 Future<void> main() async {
   // Asegura el binding antes del await para no perder el primer frame.
@@ -33,7 +35,24 @@ Future<void> main() async {
   // Inicializa el cliente de Supabase. Si la URL es inválida o la red
   // está caída, `Supabase.initialize` lanza — preferimos crash con
   // stack trace a "la app abre y todo falla en silencio".
+  // IMPORTANTE: `initSupabase` debe ir ANTES de
+  // `TierService.initialize()` porque el refresh inicial del
+  // `TierService` llama a `supabase.functions.invoke('feature-flags')`
+  // (spec HDU-003 §Notas — orden explícito por lección HDU-001/002).
   await initSupabase(env);
+
+  // Registra los singletons lazy en GetIt (ADR-005). Se hace DESPUÉS
+  // de Supabase para que cualquier singleton que lo necesite ya lo
+  // encuentre inicializado.
+  setupServiceLocator();
+
+  // Dispara el refresh inicial de los feature flags en background
+  // (fire-and-forget, AC8). El `await` solo bloquea la asignación de
+  // config; internamente `initialize()` no espera al refresh. La app
+  // sigue a `runApp` mientras el cache se llena. Si la red está caída,
+  // el cache queda vacío (todos los flags en `false` por fail-safe) y
+  // se loguea un warning — la UI no se rompe.
+  await TierService.getInstance().initialize();
 
   // HDU-001 AC5: el placeholder debe ser visible por al menos 1 segundo.
   // Este delay es solo para confirmar el ciclo de vida — NO es splash real.

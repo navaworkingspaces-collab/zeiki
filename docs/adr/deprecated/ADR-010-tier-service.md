@@ -1,7 +1,9 @@
 # ADR-010: TierService como state global cross-cutting
 
-**Estado:** Aceptado
+**Estado:** Supersedido en la práctica (ver nota 2026-07-30)
 **Fecha:** 2026-07-29
+
+> **Nota (2026-07-30, HDU-003):** la decisión de NO registrar `TierService` en `sl` fue revertida en la práctica. `TierService` SÍ se registra en GetIt como singleton lazy desde `lib/core/di/service_locator.dart`. Razón y contexto completo en `specs/HDU-003-feature-flag-system.md` (AC2 + AC7) y en el comentario de cabecera de `service_locator.dart`. Este ADR se conserva como precedente histórico; si aparece fricción con el patrón GetIt, se reabre la discusión.
 
 ## Contexto
 
