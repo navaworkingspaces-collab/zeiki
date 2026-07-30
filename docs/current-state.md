@@ -2,14 +2,14 @@
 
 > **Snapshot rápido del estado del proyecto.** Se actualiza en el cleanup (paso 12) de cada HDU cerrada. Para el detalle de una HDU específica, ver `specs/HDU-XXX-*.md`. Para el histórico, ver `.mavis/hdu.md`.
 
-**Última actualización:** 2026-07-30 (post-HDU-003 cerrada).
+**Última actualización:** 2026-07-30 (post-HDU-004 cerrada).
 
 ---
 
 ## 📍 Dónde estamos
 
 - **Fase:** 1 (MVP).
-- **Última HDU cerrada:** HDU-003 — Feature flag system del cliente.
+- **Última HDU cerrada:** HDU-004 — Navegación con go_router.
 - **HDUs activas:** ninguna.
 - **Rama `main`:** deployable.
 - **Stack operativo:** Flutter 3.38.3 + Supabase (proyecto Zeiki, región `us-east-2`) + Deno para edge functions.
@@ -53,10 +53,20 @@
 - **Bugs del implementer capturados en cleanup:** race condition con `dispose()` durante `refresh()` async (fix: guard `isClosed` antes de `_controller.add()`). Cubierto con 2 regression tests.
 - **5 follow-ups no bloqueantes registrados en `.mavis/hdu.md`** (helper de `registerLazySingleton`, conectar `refreshInterval` con `Timer.periodic`, sanitizar `debugPrint`, loggear tipos no-bool en `_parseFlags`, CLI `feature_manifest`).
 
+### HDU-004 — Navegación con go_router (2026-07-30)
+- PR #5 mergeado a main.
+- `GoRouter` con 4 rutas (`/splash`, `/onboarding`, `/login`, `/home`), 4 placeholders temporales con 2 botones cada uno, deep links con `zeiki://` funcionando, back stack funcional, state restoration al rotar.
+- **6 commits en la rama `feat/hdu-004-go-router`:** spec → deps + intent filter → router + placeholders + handler → refactor main + matar placeholder viejo → tests → 2 chores pre-merge (auditor) → 1 chore pre-merge (reviewer: `_StubScreen` con `Directionality`).
+- **14 archivos modificados/creados** (4 placeholders + 2 router files + 3 test files + `main.dart` + `pubspec.yaml` + `AndroidManifest.xml` + spec).
+- **Pipeline local verificado en Xiaomi:** `flutter analyze` 0, **54/54 unit tests** verde (era 28, +27 nuevos), **2/2 integration tests** verde (`router_test.dart`), build APK OK.
+- **Aprobado por el `zeiki-auditor`** — veredicto "Limpio con notas" (2 fixes cosméticos aplicados en el PR, 1 nota del cleanup diferida al paso 12).
+- **Aprobado por el `zeiki-reviewer`** — veredicto "🟡 Aprobado con cambios" (0 bloqueantes, 1 pre-merge chore aplicado en el PR, 14 no bloqueantes registrados en `.mavis/hdu.md`).
+- **Desviación del spec aprobada por Hugo:** AC3 / Plan técnico 1 decía `context.go(...)` en los placeholders; implementer usó `context.push(...)` con razón documentada (con `go` se rompe AC6 back). Decisión correcta, queda como lección + follow-up de patrón.
+- **8 follow-ups no bloqueantes registrados en `.mavis/hdu.md`** (whitelist de hosts en deep link, sanitizar `errorBuilder`, restringir intent filter, mover `appRouter` a GetIt, automatizar integration test en CI, regla `push` vs `go`, `android:label` branding, renombrar test de "rotación").
+
 ## 🔜 Próximos pasos sugeridos (secuencia decidida con Hugo)
 
-- **HDU-004:** `go_router` + navegación básica (rutas reales: splash → onboarding → login → home). Depende de HDU-003 ✅.
-- **HDU-005:** Identidad / auth básico (email + Google + biometría, según Target §15).
+- **HDU-005:** Identidad / auth básico (email + Google + biometría, según Target §15). Depende de HDU-003 ✅ y HDU-004 ✅.
 - **HDU-006:** Splash nuevo, con feature flag + go_router + auth mínimo. Spec redactado con base en el reporte de HDU-EXPLORE-001 (qué migrar, qué descartar, qué mejorar).
 
 ## 🐛 Follow-ups activos (de HDUs cerradas)
@@ -76,6 +86,14 @@
 | 11 | HDU-003 | `debugPrint` con la excepción en `refresh()` — sanitizar cuando el fetcher reciba más contexto (HDU-005 con auth). | baja | observation |
 | 12 | HDU-003 | `_parseFlags` ignora tipos no-bool silenciosamente — loggear con `debugPrint` cuando se ignore un valor. | baja | pendiente (HDU futura) |
 | 13 | HDU-003 | CLI `feature_manifest` (Target §15, aspiración) — genera doc auto-generada a partir del enum `AppFeature`. | baja | aspiración (Target §15) |
+| 14 | HDU-004 | Whitelist de hosts válidos para `zeikiUriToPath`. Crece naturalmente con HDU-005/006. | baja | pendiente (HDU futura) |
+| 15 | HDU-004 | Sanitizar `state.uri` en `errorBuilder` del router. Bajo riesgo hoy, escala cuando crezca el número de rutas. | baja | pendiente (HDU futura) |
+| 16 | HDU-004 | Restringir intent filter `zeiki://` a hosts específicos en `AndroidManifest.xml`. Mismo motivo que #14. | baja | pendiente (HDU futura) |
+| 17 | HDU-004 | Mover `appRouter` a GetIt como singleton lazy. Necesario cuando llegue HDU-005 (auth con `redirect:`) y `AuthService`. | media | bloqueante para HDU-005 (decidir si en esta HDU o aparte) |
+| 18 | HDU-004 | Cobertura del integration test en CI: back nativo + rotación + deep link end-to-end con `adb` automatizados. | baja | pendiente (cuando se configure CI) |
+| 19 | HDU-004 | Regla "push para detail/sheet, go para tab/sección" — documentar como patrón canónico cuando haya más navegación. | baja | pendiente (HDU futura) |
+| 20 | HDU-004 | `android:label="zeiki"` en minúsculas (debería ser "Zeiki" con Z mayúscula). Pre-existente a HDU-001. | baja | chore (HDU corta de branding) |
+| 21 | HDU-004 | Renombrar test de "rotación" a "router conserva ruta tras rebuild" — el nombre actual es engañoso. | baja | chore (HDU corta) |
 
 ## 📚 Lecciones aprendidas recientes
 

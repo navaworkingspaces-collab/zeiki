@@ -2,7 +2,7 @@
 
 > **Bootstrap de sesión.** Mavis (o cualquier agente) lee este archivo **PRIMERO** al abrir una sesión en este proyecto. Sin leer el resto del repo, este archivo da el contexto mínimo para no perderse.
 >
-> **Última actualización:** 2026-07-30 (post-HDU-003)
+> **Última actualización:** 2026-07-30 (post-HDU-004)
 
 ---
 
@@ -10,7 +10,7 @@
 
 - **Nombre:** Zeiki (con Z). **Cero "Seiki"** — el proyecto legacy es `seiki_app`, no se mezclan.
 - **Qué es:** App móvil (Flutter) para facturación CFDI 4.0 en México. Reescritura desde cero.
-- **Estado:** Fase 1 — MVP. **Código base + backend Supabase + feature flag system del cliente listos** (HDU-001, HDU-002 y HDU-003 cerradas).
+- **Estado:** Fase 1 — MVP. **Código base + backend Supabase + feature flag system del cliente + navegación con go_router listos** (HDU-001, HDU-002, HDU-003 y HDU-004 cerradas).
 - **Stack:** Flutter 3.38.3 + Supabase (Postgres + Auth + Edge Functions) + Deno para edge functions. Detalle en `target-architecture.md`.
 - **Sin clientes en producción** → no hay riesgo de "valle" en la reescritura.
 
