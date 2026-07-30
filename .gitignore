@@ -45,3 +45,6 @@ desktop.ini
 
 # Mavis/orchestrator tooling (HDU tracking, PR bodies, etc.)
 .mavis/
+
+# Supabase CLI artifacts (creado por supabase db push / supabase functions deploy)
+supabase/.temp/
