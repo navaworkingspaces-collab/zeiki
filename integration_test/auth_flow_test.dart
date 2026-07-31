@@ -28,38 +28,40 @@
 //   3. `flutter test integration_test/auth_flow_test.dart -d 2203129G`
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' as sb;
 
+import 'package:zeiki/core/auth/auth_service.dart';
+import 'package:zeiki/core/di/service_locator.dart';
 import 'package:zeiki/core/router/app_router.dart';
 import 'package:zeiki/main.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  // El test runner de integration_test NO llama a `main()` por su
-  // cuenta. La forma estándar es montar `ZeikiApp` con un router
-  // construido aquí. El `setupServiceLocator` también lo llamamos
-  // aquí para que `getIt<GoRouter>()` y `getIt<AuthService>()`
-  // estén disponibles.
-  //
-  // **IMPORTANTE:** este test asume que `assets/.env` tiene
-  // `SUPABASE_URL` y `SUPABASE_ANON_KEY` reales. Sin eso, la app
-  // crashea al `initSupabase`. Para QA sin device, usar `flutter run`
-  // directamente (donde `main()` se llama completo).
   setUpAll(() {
-    // El setup de GetIt ya se hace en `main()` cuando se corre con
-    // `flutter run`. En el integration test runner, lo hacemos aquí
-    // — pero `initSupabase` requiere que `assets/.env` esté cargado,
-    // lo cual es responsabilidad del operador (Hugo).
-    // setupServiceLocator();
+    // El test runner NO llama a `main()` del proyecto. Aquí
+    // registramos un AuthService fake en GetIt para que el redirect
+    // del router pueda consultar la sesión sin crashear. El fake
+    // siempre devuelve `null` en `getCurrentSession` (= sin sesión),
+    // que es lo que queremos para estos smoke tests.
+    if (!getIt.isRegistered<AuthService>()) {
+      getIt.registerSingleton<AuthService>(_NullAuthServiceForTest());
+    }
+  });
+
+  tearDownAll(() {
+    // Limpia el singleton para no contaminar otras suites.
+    if (getIt.isRegistered<AuthService>()) {
+      getIt.unregister<AuthService>();
+    }
   });
 
   testWidgets('AC25: cold start sin sesión termina en /splash o /login',
       (WidgetTester tester) async {
     final router = buildAppRouter(
-      // El AuthService real no está disponible en el test runner
-      // sin `initSupabase`. Para este smoke test, basta con que el
-      // redirect reciba un getter que devuelva `null` siempre.
-      authServiceGetter: () => throw _NoAuthServiceAvailable(),
+      // El getter resuelve el AuthService desde GetIt (registrado en
+      // setUpAll). El fake devuelve `null` → redirect a /login.
+      authServiceGetter: () => getIt<AuthService>(),
     );
     addTearDown(router.dispose);
 
@@ -68,9 +70,7 @@ void main() {
 
     final currentPath =
         router.routerDelegate.currentConfiguration.uri.path;
-    // Sin sesión y sin la posibilidad de obtenerla, el redirect
-    // manda a /login (cualquier ruta que no sea /splash ni
-    // /onboarding redirige a /login cuando no hay sesión).
+    // Sin sesión, el redirect manda a /login.
     expect(currentPath, isIn(<String>{'/splash', '/login'}),
         reason: 'cold start sin sesión debe terminar en /splash o /login');
   });
@@ -78,7 +78,7 @@ void main() {
   testWidgets('AC14, AC15: pantalla /login tiene ambos métodos de auth',
       (WidgetTester tester) async {
     final router = buildAppRouter(
-      authServiceGetter: () => throw _NoAuthServiceAvailable(),
+      authServiceGetter: () => getIt<AuthService>(),
     );
     addTearDown(router.dispose);
 
@@ -99,7 +99,7 @@ void main() {
   testWidgets('AC4: pantalla /register tiene el botón "Crear cuenta" '
       'y "Continuar con Google"', (WidgetTester tester) async {
     final router = buildAppRouter(
-      authServiceGetter: () => throw _NoAuthServiceAvailable(),
+      authServiceGetter: () => getIt<AuthService>(),
     );
     addTearDown(router.dispose);
 
@@ -116,9 +116,32 @@ void main() {
   });
 }
 
-/// Excepción interna del test para señalar que el AuthService real
-/// no está disponible en el integration test runner sin `initSupabase`.
-class _NoAuthServiceAvailable implements Exception {
+/// Fake de `AuthService` para el integration test runner. Solo el método
+/// que el redirect consulta (`getCurrentSession`) está implementado;
+/// el resto lanza `UnimplementedError` si se llama. Es suficiente para
+/// los smoke tests de este archivo (router redirect + render de
+/// pantallas), no para flujos de sign-in reales.
+class _NullAuthServiceForTest implements AuthService {
   @override
-  String toString() => 'NoAuthServiceAvailable';
+  sb.Session? getCurrentSession() => null;
+
+  @override
+  Stream<sb.AuthState> get authStateChanges =>
+      const Stream<sb.AuthState>.empty();
+
+  @override
+  Future<sb.AuthResponse> signUpWithEmail(
+          {required String email, required String password}) =>
+      throw UnimplementedError();
+
+  @override
+  Future<sb.AuthResponse> signInWithEmail(
+          {required String email, required String password}) =>
+      throw UnimplementedError();
+
+  @override
+  Future<sb.AuthResponse> signInWithGoogle() => throw UnimplementedError();
+
+  @override
+  Future<void> signOut() => throw UnimplementedError();
 }
