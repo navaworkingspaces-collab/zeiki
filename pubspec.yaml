@@ -44,6 +44,14 @@ dependencies:
   # (conventions §11: deps explícitas, no implícitas).
   app_links: ^7.0.0
 
+  # Login con Google (HDU-005, AC11). Wrapper local en
+  # `lib/core/auth/google_sign_in_handler.dart` para mantener el plugin
+  # aislado del código de feature y permitir fakes en tests (conventions
+  # §3). Requiere que Hugo configure el provider en Supabase y registre
+  # el SHA-1 del cert de debug en Google Cloud Console (spec §Riesgos,
+  # runbook `docs/runbooks/google-signin-supabase.md`).
+  google_sign_in: ^6.2.0
+
   cupertino_icons: ^1.0.8
 
 dev_dependencies:
