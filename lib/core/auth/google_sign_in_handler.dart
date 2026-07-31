@@ -20,7 +20,6 @@
 //
 // El `AuthService` toma el `idToken` y lo pasa a
 // `Supabase.auth.signInWithIdToken(provider: google, idToken: ...)`.
-import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:google_sign_in/google_sign_in.dart';
 
 import 'auth_exception.dart';
@@ -94,26 +93,19 @@ class GoogleSignInHandler {
   /// servidor de Google y devuelve `null` aunque la autenticación sea
   /// exitosa.
   Future<String?> _defaultSignIn() async {
-    // BUG-001 investigation: trazar qué devuelve el plugin real.
-    // Output filtrable con `adb logcat | grep 'BUG-001'`. Se quita
-    // cuando se cierre la BUG.
-    debugPrint('[BUG-001] googleSignIn instance created. '
-        'serverClientId=${webClientId == null ? "null" : "<redacted-${webClientId!.length} chars>"}, '
-        'scopes=[email, profile]');
     final googleSignIn = GoogleSignIn(
       scopes: const <String>['email', 'profile'],
       serverClientId: webClientId,
     );
+    // TEMPORAL: BUG-001 chooser verification. Hugo quiere confirmar
+    // que el chooser SÍ aparece con las 3 cuentas cuando Play Services
+    // no tiene cuenta recordada. `signOut()` limpia el cache local del
+    // plugin; el próximo `signIn()` debe mostrar el chooser. SE
+    // REMUEVE antes del merge (ver commit siguiente).
+    await googleSignIn.signOut();
     final account = await googleSignIn.signIn();
-    debugPrint('[BUG-001] signIn() returned: '
-        'account=${account == null ? "null" : "non-null"}, '
-        'email=${account?.email}');
     if (account == null) return null;
     final auth = await account.authentication;
-    debugPrint('[BUG-001] account.authentication: '
-        'idToken=${auth.idToken == null ? "null" : "non-null(${auth.idToken!.length} chars)"}, '
-        'accessToken=${auth.accessToken == null ? "null" : "non-null(${auth.accessToken!.length} chars)"}, '
-        'serverAuthCode=${account.serverAuthCode == null ? "null" : "non-null"}');
     return auth.idToken;
   }
 }
