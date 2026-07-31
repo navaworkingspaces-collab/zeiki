@@ -714,6 +714,7 @@ Cada decisión grande tiene un ADR en `docs/adr/ADR-XXX-<slug>.md` con el format
 | 009 | Reescritura desde cero | [docs/adr/ADR-009-rewrite-with-knowledge-reuse.md](../adr/ADR-009-rewrite-with-knowledge-reuse.md) | Aceptado |
 | 010 | TierService como state global | [docs/adr/deprecated/ADR-010-tier-service.md](../adr/deprecated/ADR-010-tier-service.md) | Supersedido por ADR-011 |
 | 011 | TierService registrado en GetIt | [docs/adr/ADR-011-tier-service-getit-registration.md](../adr/ADR-011-tier-service-getit-registration.md) | Aceptado |
+| 012 | Router en `core/` con imports a `features/` + GoRouter en GetIt | [docs/adr/ADR-012-router-location-and-getit.md](../adr/ADR-012-router-location-and-getit.md) | Aceptado |
 
 **Cómo se agregan nuevos ADRs:**
 

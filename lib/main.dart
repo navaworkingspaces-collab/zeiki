@@ -10,20 +10,20 @@
 //   esté listo antes del primer frame (la app sigue a `runApp` mientras
 //   el cache se llena en background).
 // HDU-004: el `MaterialApp` con `home:` se reemplaza por
-//   `MaterialApp.router(routerConfig: appRouter)`. La navegación
-//   declarativa vive en `lib/core/router/app_router.dart`. Las pantallas
-//   son placeholders temporales (espec §AC2) que se migran a
-//   `lib/features/<dominio>/` cuando cada una tenga contenido real.
-//   Se elimina el `Future.delayed(1s)` que HDU-001 había dejado como
-//   prueba de vida (espec §AC12) — la app ya no espera 1s artificial
-//   antes de mostrar la primera pantalla.
+//   `MaterialApp.router(routerConfig: ...)`. La navegación declarativa
+//   vive en `lib/core/router/app_router.dart`.
+// HDU-005 (Decisión A del review de HDU-004): el `appRouter` deja de
+//   ser una variable global mutable y se obtiene de GetIt con
+//   `getIt<GoRouter>()`. Esto le permite al `redirect` del router
+//   consultar `AuthService` (también en GetIt) en cada navegación.
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:go_router/go_router.dart';
 
+import 'core/auth/auth_service.dart';
 import 'core/constants/env_config.dart';
 import 'core/di/service_locator.dart';
 import 'core/router/app_links_handler.dart';
-import 'core/router/app_router.dart';
 import 'core/supabase/supabase_client.dart';
 import 'core/tiers/tier_service.dart';
 
@@ -46,15 +46,22 @@ Future<void> main() async {
   // está caída, `Supabase.initialize` lanza — preferimos crash con
   // stack trace a "la app abre y todo falla en silencio".
   // IMPORTANTE: `initSupabase` debe ir ANTES de
-  // `TierService.initialize()` porque el refresh inicial del
-  // `TierService` llama a `supabase.functions.invoke('feature-flags')`
-  // (spec HDU-003 §Notas — orden explícito por lección HDU-001/002).
+  // `setupServiceLocator()` y `TierService.initialize()` porque
+  // ambos servicios (incluido el nuevo `AuthService` de HDU-005)
+  // dependen del cliente ya inicializado.
   await initSupabase(env);
 
-  // Registra los singletons lazy en GetIt (ADR-005). Se hace DESPUÉS
-  // de Supabase para que cualquier singleton que lo necesite ya lo
-  // encuentre inicializado.
+  // Registra los singletons lazy en GetIt (ADR-005, ADR-011). Se hace
+  // DESPUÉS de Supabase para que cualquier singleton que lo necesite
+  // ya lo encuentre inicializado. `setupServiceLocator` ahora registra
+  // también `AuthService`, `GoogleSignInHandler` y `GoRouter` (HDU-005).
   setupServiceLocator();
+
+  // Pre-calienta `AuthService` para que `getCurrentSession()` esté
+  // disponible ANTES del primer redirect del router. Si no, el redirect
+  // podría leer `null` cuando en realidad hay una sesión persistida
+  // (caso cold start con sesión viva — AC20, AC25).
+  getIt<AuthService>();
 
   // Dispara el refresh inicial de los feature flags en background
   // (fire-and-forget, AC8 de HDU-003). El `await` solo bloquea la
@@ -64,18 +71,26 @@ Future<void> main() async {
   // `false` por fail-safe) y se loguea un warning — la UI no se rompe.
   await TierService.getInstance().initialize();
 
-  runApp(const ZeikiApp());
+  // El router se obtiene de GetIt (HDU-005, Decisión A del review de
+  // HDU-004). La factory `buildAppRouter` se evaluó al primer
+  // `getIt<GoRouter>()` dentro de `setupServiceLocator` y queda
+  // cacheada — esta llamada es la misma instancia.
+  final router = getIt<GoRouter>();
+
+  runApp(ZeikiApp(router: router));
 
   // HDU-004 AC5: cablea los deep links `zeiki://<ruta>` al router.
   // Se hace DESPUÉS de `runApp` para que el router ya esté montado
   // cuando llegue el primer intent. La suscripción NO se captura: vive
   // lo que vive el proceso (los tests sí la capturan para cancelarla
   // y verificar el deep link end-to-end).
-  wireAppLinksDeepLinks(appRouter);
+  wireAppLinksDeepLinks(router);
 }
 
 class ZeikiApp extends StatelessWidget {
-  const ZeikiApp({super.key});
+  const ZeikiApp({super.key, required this.router});
+
+  final GoRouter router;
 
   @override
   Widget build(BuildContext context) {
@@ -91,7 +106,7 @@ class ZeikiApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
         useMaterial3: true,
       ),
-      routerConfig: appRouter,
+      routerConfig: router,
     );
   }
 }
