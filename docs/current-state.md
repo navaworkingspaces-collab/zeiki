@@ -2,15 +2,15 @@
 
 > **Snapshot rápido del estado del proyecto.** Se actualiza en el cleanup (paso 12) de cada HDU cerrada. Para el detalle de una HDU específica, ver `specs/HDU-XXX-*.md`. Para el histórico, ver `.mavis/hdu.md`.
 
-**Última actualización:** 2026-07-31 (post-HDU-005b cerrada).
+**Última actualización:** 2026-07-31 (post-HDU-006 cerrada, HDU-007 abierta).
 
 ---
 
 ## 📍 Dónde estamos
 
 - **Fase:** 1 (MVP).
-- **Última HDU cerrada:** HDU-005b — Biometría + timer de inactividad.
-- **HDUs activas:** ninguna.
+- **Última HDU cerrada:** HDU-006 — Splash nuevo con branding + feature flag.
+- **HDUs activas:** HDU-007 (bug Google Sign-In — spec pendiente, síntoma confirmado en QA).
 - **Rama `main`:** deployable.
 - **Stack operativo:** Flutter 3.38.3 + Supabase (proyecto Zeiki, región `us-east-2`) + Deno para edge functions.
 - **Proyecto Supabase:** ref `iocbqjzmoneulydmeavr`, URL `https://iocbqjzmoneulydmeavr.supabase.co`. Config en `assets/.env` (en `.gitignore`).
@@ -94,9 +94,28 @@
   - **Move de `BiometricService` a `services/`:** el spec lo ponía en `auth/`, contradiciendo Target §6. Se corrigió.
 - **5 follow-ups no bloqueantes registrados en `.mavis/hdu.md`** (extraer `_FakeBiometricService` a helper, whitelist de "último userId" post-logout, migrar session token a `flutter_secure_storage`, pre-cargar cache de `BiometricService`, HDU-006).
 
+### HDU-006 — Splash nuevo con branding + feature flag (2026-07-31)
+- PR #8 mergeado a main.
+- `SplashScreen` real con branding (logo `CustomPaint` con rotar/escalar, "ZEIKI" 72px bold con slide-in, "LOADING", 50 partículas flotando + 3 anillos en loop, barra de progreso morada), detrás de `AppFeature.splash` (Target §10). Versión del footer dinámica vía `package_info_plus ^8.0.2`. `SplashCubit` con `SplashState` sealed (`SplashLoading` → `SplashReady` → `SplashHidden`). `dispose()` idempotente.
+- **16 commits en la rama `feat/hdu-006-splash-nuevo`:** spec → branding widgets → SplashCubit → SplashScreen wired al router → tests (8 widget + 12 cubit + 1 redirect + 1 integration) → runbook → 4 pre-merge (2 auditor + 2 reviewer v1/v3) + 1 fix fail-safe v3.
+- **20 archivos modificados/creados** + 1 dep nueva (`package_info_plus`).
+- **Pipeline local verificado en Xiaomi:** `flutter analyze` 0, **179/179 unit tests** verde (era 155 en HDU-005b, +24 nuevos), build APK OK.
+- **Aprobado por el `zeiki-auditor`** — veredicto "Limpio con notas" (2 fixes pre-merge: dead `Transform.translate` + caracteres chinos en comentario).
+- **Aprobado por el `zeiki-reviewer`** después de **3 rondas de review:**
+  - v1 🔴 Rechazado: 1 bloqueante (`rootBundle.loadString('pubspec.yaml')` falla en producción).
+  - v2 ✅ Aprobado: tras fix con `package_info_plus` (opción 2; la opción 1 — `PlatformDispatcher.applicationVersion` — no existe en Flutter 3.38.3, reconocido por el reviewer).
+  - v3 ✅ Aprobado: tras fix con `TierService.isCacheLoaded()` y fail-safe "ON" cuando el cache está frío (resuelve pregunta no-bloqueante de v2 sobre comportamiento con red caída).
+- **Decisiones de producto:**
+  - **Sin tiempo mínimo** (splash dura lo que dure el redirect del router).
+  - **Fail-safe "ON":** si el cache del `TierService` está frío (primera instalación, red caída), mostrar el splash por default. Solo se salta si el flag explícitamente está OFF en Supabase.
+  - **Versión dinámica:** `package_info_plus` lee del `pubspec.yaml` cross-platform, sin riesgo de que el archivo no esté bundleado.
+- **QA local en Xiaomi (Hugo):** cold start con app cerrada (force-stop) → splash aparece completo con footer `v0.1.0 · Developed by Zeiki Team` → después de ~3s fade-out → redirect → /login. Cierre + reapertura de la app → splash reaparece (cache cold, fail-safe ON).
+- **Bug encontrado en QA post-merge (HDU-007):** Google Sign-In no completa el flujo. El selector de cuenta SÍ aparece, pero después de seleccionar una cuenta no pasa nada. NO fue detectado por los 113/113 tests de HDU-005 ni por las 3 rondas de review. Lección guardada en memoria #8.
+- **5 follow-ups no bloqueantes** (registrados por el reviewer v3): redundancia de tests, nit de naming, mismatch fake vs real en `isCacheLoaded`, edge case de operador olvidando seedear flag, `debugEnabled` no activa fail-safe.
+
 ## 🔜 Próximos pasos sugeridos (secuencia decidida con Hugo)
 
-- **HDU-006:** Splash nuevo, con feature flag + go_router + auth mínimo. Spec redactado con base en el reporte de HDU-EXPLORE-001 (qué migrar, qué descartar, qué mejorar). Depende de HDU-003 ✅, HDU-004 ✅, HDU-005 ✅, HDU-005b ✅.
+- **HDU-007 (PRIORIDAD ALTA):** Bug Google Sign-In no completa el flujo. Es el primer HDU tipo bug del proyecto. Spec pendiente (síntoma confirmado, causa raíz por investigar). Sistemas externos: Google Cloud Console (OAuth clients), Supabase dashboard (Auth providers), `google_sign_in` 6.x plugin. Plan: investigar `google_sign_in_handler.dart` + `auth_service.dart` + logs de Supabase + verificar config en Google Cloud Console (SHA-1, redirect URI, scopes) + reproducir con `flutter run` + capturar `adb logcat` + fix + regression test + QA en device real.
 
 ## 🐛 Follow-ups activos (de HDUs cerradas)
 
@@ -123,6 +142,14 @@
 | 19 | HDU-004 | Regla "push para detail/sheet, go para tab/sección" — documentar como patrón canónico cuando haya más navegación. | baja | pendiente (HDU futura) |
 | 20 | HDU-004 | `android:label="zeiki"` en minúsculas (debería ser "Zeiki" con Z mayúscula). Pre-existente a HDU-001. | baja | chore (HDU corta de branding) |
 | 21 | HDU-004 | Renombrar test de "rotación" a "router conserva ruta tras rebuild" — el nombre actual es engañoso. | baja | chore (HDU corta) |
+| 22 | **HDU-005** | **BUG:** Google Sign-In no completa el flujo — selector de cuenta aparece, seleccionar cuenta → no pasa nada. Detectado en QA post-HDU-006 (no en test). 113/113 tests + 3 rondas de review no lo cacharon. | **alta** | **HDU-007 abierta (tipo bug)** |
+| 23 | HDU-006 | Redundancia entre grupos "cache cold" y "feature flag OFF" en `splash_screen_test.dart`. | baja | pendiente (HDU corta de test cleanup) |
+| 24 | HDU-006 | Nit de naming en el grupo "cache cold" (un test no es realmente cold porque setea un flag). | baja | pendiente (chore) |
+| 25 | HDU-006 | Fake `_FakeTierService.isCacheLoaded()` retorna `flags.isNotEmpty`; el real retorna `_cache.isNotEmpty \|\| _config.debugEnabled`. Mismatch pequeño. | baja | pendiente (chore) |
+| 26 | HDU-006 | Edge case: si el operador olvidó seedear `splash` en Supabase, el splash se salta. Documentar en runbook. | baja | pendiente (chore) |
+| 27 | HDU-006 | Wrapper de `package_info_plus` en `core/services/` — se usa directo en `splash_screen.dart`. Si aparece un segundo callsite, extraer. | baja | observation (extraer cuando haya 2º callsite) |
+| 28 | HDU-006 | Test del `catch (_)` de `_loadAppVersion` — coverage gap. Si alguien borra el try/catch, ningún test lo detecta. | baja | pendiente (chore) |
+| 29 | **Lección #8 (memoria)** | **Tests verde NO es app funcionando. QA en device real es obligatorio antes de merge para cualquier HDU con OAuth / push / deep links / biometría nativa / pagos.** | alta | regla operativa (cross-project) |
 
 ## 📚 Lecciones aprendidas recientes
 

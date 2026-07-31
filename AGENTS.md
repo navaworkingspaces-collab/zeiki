@@ -2,7 +2,7 @@
 
 > **Bootstrap de sesión.** Mavis (o cualquier agente) lee este archivo **PRIMERO** al abrir una sesión en este proyecto. Sin leer el resto del repo, este archivo da el contexto mínimo para no perderse.
 >
-> **Última actualización:** 2026-07-31 (post-HDU-005b)
+> **Última actualización:** 2026-07-31 (post-HDU-006 cerrada, HDU-007 abierta)
 
 ---
 
@@ -10,7 +10,7 @@
 
 - **Nombre:** Zeiki (con Z). **Cero "Seiki"** — el proyecto legacy es `seiki_app`, no se mezclan.
 - **Qué es:** App móvil (Flutter) para facturación CFDI 4.0 en México. Reescritura desde cero.
-- **Estado:** Fase 1 — MVP. **Código base + backend Supabase + feature flag system del cliente + navegación con go_router + auth básico (email + Google) + biometría + timer de inactividad listos** (HDU-001, HDU-002, HDU-003, HDU-004, HDU-005 y HDU-005b cerradas).
+- **Estado:** Fase 1 — MVP. **Código base + backend Supabase + feature flag system del cliente + navegación con go_router + auth básico (email + Google, ⚠️ Google Sign-In con bug — ver HDU-007) + biometría + timer de inactividad + splash nuevo con branding** listos (HDU-001, HDU-002, HDU-003, HDU-004, HDU-005, HDU-005b, HDU-006 cerradas).
 - **Stack:** Flutter 3.38.3 + Supabase (Postgres + Auth + Edge Functions) + Deno para edge functions. Detalle en `target-architecture.md`.
 - **Sin clientes en producción** → no hay riesgo de "valle" en la reescritura.
 
@@ -38,21 +38,23 @@ Después de leer esos 5:
 
 ## Lo que NO existe (a propósito)
 
-- **No hay HDUs abiertas.** Cero. Si quieres abrir una, créala con el spec chiquito del `workflow.md §2`.
+- **HDU-007 abierta** (única activa): bug Google Sign-In no completa el flujo. Spec pendiente, síntoma confirmado en QA post-HDU-006. Ver `.mavis/hdu.md` para detalle.
 - **No hay agente `zeiki-pipeline-runner` todavía** (workflow §8 lo referencia). Se crea cuando se configure CI.
+- **No hay plantilla `hdu-bug` todavía** — HDU-007 será la primera en usarla, sale en este cleanup.
 
 ---
 
 ## Lo que existe (lo que sí está)
 
-- **Código del cliente:** Flutter app con placeholder, 6 carpetas en `lib/core/` (auth, di, logging, constants, services, tiers), 6 carpetas en `lib/features/` (identidad, fiscal, clientes, reportes, asistencia, configuracion), 7 dependencias declaradas, smoke test.
-- **Backend Supabase:** proyecto `iocbqjzmoneulydmeavr` (región `us-east-2`). Tabla `app_tier_features` con RLS + seed + GRANTs. Edge function `feature-flags` deployada (devuelve los flags en JSON). Cliente Dart inicializado en `main.dart`.
-- **Runbooks:** `docs/runbooks/secrets.md` (gestión de secretos).
+- **Código del cliente:** Flutter app con `SplashScreen` real (HDU-006) detrás de feature flag, login screen (HDU-005), home screen, biometría (HDU-005b), 6 carpetas en `lib/core/` (auth, di, logging, constants, services, tiers), 6 carpetas en `lib/features/` (identidad, fiscal, clientes, reportes, asistencia, configuracion), 8 dependencias declaradas (HDU-006 agregó `package_info_plus`), 179/179 unit tests verde, integration tests.
+- **Backend Supabase:** proyecto `iocbqjzmoneulydmeavr` (región `us-east-2`). Tabla `app_tier_features` con RLS + seed + GRANTs. Edge function `feature-flags` deployada (devuelve los flags en JSON). Cliente Dart inicializado en `main.dart`. **Google provider habilitado** con Client IDs (Android+Web) y Client Secret (Web) — pero el flujo cliente está roto (ver HDU-007).
+- **Runbooks:** `docs/runbooks/secrets.md` (gestión de secretos), `docs/runbooks/google-signin-supabase.md` (configuración OAuth), `docs/runbooks/splash-feature-flag.md` (activación del flag de splash en Supabase).
 - **Reportes de investigación:** `docs/research/HDU-EXPLORE-001-splash-legacy-report.md`.
+- **Reportes de review:** `docs/reviews/HDU-006-review.md` + v2 + v3 (3 rondas).
 - **Tracking de HDUs:** `.mavis/hdu.md` (local, en `.gitignore`).
 - **Snapshot del estado:** `docs/current-state.md` (commiteado, en repo).
 - **Agentes del orquestador:** `zeiki-implementer`, `zeiki-auditor`, `zeiki-reviewer` en `C:\Users\Pc\.minimax\agents\`.
-- **Documentación completa:** Target Architecture, Conventions, Workflow, Git, 12 ADRs (ADR-010 deprecated, movido a `deprecated/`; ADR-012 documenta la excepción arquitectónica del router), 1 plantilla (HDU-EXPLORE).
+- **Documentación completa:** Target Architecture, Conventions, Workflow, Git, 12 ADRs (ADR-010 deprecated, movido a `deprecated/`; ADR-011 sobre `TierService` en GetIt; ADR-012 documenta la excepción arquitectónica del router), 2 plantillas (HDU-EXPLORE + la nueva HDU-BUG que sale en este cleanup).
 - **Repositorio legacy** `navaworkingspaces-collab/seiki_app` en **read-only indefinido** como respaldo histórico.
   - **Para qué sirve:** consultar algoritmos validados, integraciones probadas, reglas de negocio aprendidas.
   - **Qué NO se hace:** no se commitea ahí, no se reabren HDUs cerradas, no se traen tareas como activas.
@@ -69,6 +71,8 @@ Después de leer esos 5:
 - **Una sola fuente de verdad por concepto.** Si está en dos archivos, es bug. La filosofía vive en Target §0, no se duplica.
 - **Los planos NO se preguntan, se aplican.** Si algo está en Target/Conventions/ADR, se hace. Las preguntas son sobre cosas NO documentadas, no sobre decisiones ya tomadas.
 - **Lo que el auditor marca, se hace.** Cualquier salida de un agente de revisión requiere acción inmediata, no "follow-up". (Regla 7.)
+- **Tests verde NO es app funcionando.** El QA en device real (Xiaomi 2203129G para Zeiki) es OBLIGATORIO antes de merge, no opcional, para cualquier HDU que toque código con integración externa (OAuth, push, deep links, biometría nativa, pagos). Los tests automatizados son red de seguridad para regresiones, NO verificación de correctitud. (Regla memoria #8, post-HDU-006.)
+- **0 crons stale al cerrar HDUs/async tasks.** Antes de declarar "cerrado, sin crons", correr `mavis cron list agent_name: me` y matar cualquier cron stale (no solo los creados en esta sesión). Los crons son persistentes entre sesiones. (Regla memoria cross-project, 2026-07-30.)
 
 ---
 
@@ -76,7 +80,7 @@ Después de leer esos 5:
 
 - **Mavis orquesta, no implementa.** La implementación la hace una sesión de `zeiki-implementer` en background.
 - **HDU-EXPLORE previa** (plantilla en `docs/templates/hdu-explore.md`) cuando una HDU toca un sistema externo (SAT, Facturama, código legacy, etc.).
-- **Workflow de 12 pasos:** spec → branch → test red → implement → test green → review (3 gates) → pipeline → QA local → commit → PR → cleanup.
+- **Workflow de 12 pasos:** spec → branch → test red → implement → test green → review (3 gates) → pipeline → **QA local en device real (Xiaomi 2203129G)** → commit → PR → cleanup. **El QA local requiere instalar el APK en el Xiaomi y hacer smoke test manual del flujo crítico**, NO solo correr la suite de tests automatizados. Para HDUs sin integración externa (ej. refactor, chore) puede bastar con los tests automatizados, pero para HDUs con OAuth / push / deep links / biometría nativa / pagos / cualquier sistema externo, el QA en device real es BLOQUEANTE.
 - **Review en 3 gates:** `zeiki-reviewer` valida clean code + security + architecture. `zeiki-auditor` valida minimalismo y relevancia.
 - **Definition of Done** del workflow es la checklist de cierre.
 - **Conventional Comments en code review:** prefijos `nit:` / `issue:` / `question:` / `praise:` / `suggestion:` / `chore:` / `thought:`.
