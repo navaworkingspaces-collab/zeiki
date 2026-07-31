@@ -20,6 +20,7 @@ import 'package:supabase_flutter/supabase_flutter.dart' as sb;
 
 import 'package:zeiki/core/auth/auth_exception.dart';
 import 'package:zeiki/core/auth/auth_service.dart';
+import 'package:zeiki/core/auth/biometric_service.dart';
 import 'package:zeiki/core/auth/google_sign_in_handler.dart';
 import 'package:zeiki/core/di/service_locator.dart';
 import 'package:zeiki/core/router/app_router.dart';
@@ -31,12 +32,15 @@ void main() {
     // `AuthService` fake: sesión siempre null para que el redirect
     // no nos saque de la ruta que estamos testeando.
     final fakeAuth = _FakeAuthService(session: null);
+    final fakeBiometric = _FakeBiometricService();
     getIt.registerSingleton<AuthService>(fakeAuth);
     getIt.registerSingleton<GoogleSignInHandler>(
       const GoogleSignInHandler(),
     );
+    getIt.registerSingleton<BiometricService>(fakeBiometric);
     router = buildAppRouter(
       authServiceGetter: () => getIt<AuthService>(),
+      biometricServiceGetter: () => getIt<BiometricService>(),
     );
   });
 
@@ -96,12 +100,20 @@ void main() {
     });
   });
 
-  group('AppRoute enum (HDU-004 + HDU-005)', () {
-    test('declara las 5 rutas (4 de HDU-004 + /register de HDU-005)', () {
-      expect(AppRoute.values, hasLength(5));
+  group('AppRoute enum (HDU-004 + HDU-005 + HDU-005b)', () {
+    test('declara las 6 rutas (HDU-004 + /register HDU-005 + /unlock HDU-005b)',
+        () {
+      expect(AppRoute.values, hasLength(6));
       expect(
         AppRoute.values.map((r) => r.path).toSet(),
-        {'/splash', '/onboarding', '/login', '/register', '/home'},
+        {
+          '/splash',
+          '/onboarding',
+          '/login',
+          '/register',
+          '/unlock',
+          '/home',
+        },
       );
     });
 
@@ -114,7 +126,8 @@ void main() {
       );
     });
 
-    test('cada AppRoute path resuelve sin error (HDU-004 AC1 + HDU-005)', () {
+    test('cada AppRoute path resuelve sin error (HDU-004 + HDU-005 + HDU-005b)',
+        () {
       for (final route in AppRoute.values) {
         final match = router.configuration.findMatch(Uri.parse(route.path));
         expect(
@@ -123,6 +136,15 @@ void main() {
           reason: 'Route ${route.path} should resolve without error',
         );
       }
+    });
+
+    test('resuelve /unlock sin error (HDU-005b, AC15)', () {
+      final matchList =
+          router.configuration.findMatch(Uri.parse('/unlock'));
+      expect(matchList.isError, isFalse,
+          reason: 'HDU-005b: /unlock debe existir para el cold start con '
+              'sesión + biometría');
+      expect(matchList.matches, isNotEmpty);
     });
   });
 
@@ -168,6 +190,9 @@ class _FakeAuthService implements AuthService {
   sb.Session? getCurrentSession() => session;
 
   @override
+  String? get currentUserId => session?.user.id;
+
+  @override
   Future<void> signOut() async {
     session = null;
   }
@@ -203,4 +228,25 @@ class _FakeAuthService implements AuthService {
       );
 
   // (hasGoogleHandler removido en cleanup HDU-005, ver auth_service.dart)
+}
+
+/// Fake de `BiometricService` para tests del router. Devuelve
+/// `false` por default para no interferir con la lógica del redirect
+/// (los tests de biometría específicos están en
+/// `biometric_service_test.dart`).
+class _FakeBiometricService implements BiometricService {
+  @override
+  Future<bool> isBiometricAvailable() async => false;
+
+  @override
+  Future<bool> authenticate(String reason) async => false;
+
+  @override
+  Future<bool> isBiometricEnabled({required String userId}) async => false;
+
+  @override
+  Future<void> setBiometricEnabled(
+    bool enabled,
+    {required String userId}
+  ) async {}
 }

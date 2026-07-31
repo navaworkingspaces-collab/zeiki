@@ -138,10 +138,12 @@ void main() {
     });
   });
 
-  group('AppRoute enum (HDU-005 agregó /register)', () {
-    test('declara 5 rutas: splash, onboarding, login, register, home', () {
-      // Antes eran 4 (HDU-004). Se agregó /register en HDU-005 (AC4).
-      expect(AppRoute.values, hasLength(5));
+  group('AppRoute enum (HDU-005 + HDU-005b)', () {
+    test('declara 6 rutas: splash, onboarding, login, register, unlock, home',
+        () {
+      // HDU-004: 4 rutas. HDU-005 agregó /register (AC4). HDU-005b
+      // agregó /unlock (AC15) para el cold start con biometría.
+      expect(AppRoute.values, hasLength(6));
       expect(
         AppRoute.values.map((r) => r.path).toSet(),
         {
@@ -149,6 +151,7 @@ void main() {
           '/onboarding',
           '/login',
           '/register',
+          '/unlock',
           '/home',
         },
       );
