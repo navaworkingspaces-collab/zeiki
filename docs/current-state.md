@@ -2,14 +2,14 @@
 
 > **Snapshot rápido del estado del proyecto.** Se actualiza en el cleanup (paso 12) de cada HDU cerrada. Para el detalle de una HDU específica, ver `specs/HDU-XXX-*.md`. Para el histórico, ver `.mavis/hdu.md`.
 
-**Última actualización:** 2026-07-30 (post-HDU-004 cerrada).
+**Última actualización:** 2026-07-31 (post-HDU-005 cerrada).
 
 ---
 
 ## 📍 Dónde estamos
 
 - **Fase:** 1 (MVP).
-- **Última HDU cerrada:** HDU-004 — Navegación con go_router.
+- **Última HDU cerrada:** HDU-005 — Auth básico (email + Google).
 - **HDUs activas:** ninguna.
 - **Rama `main`:** deployable.
 - **Stack operativo:** Flutter 3.38.3 + Supabase (proyecto Zeiki, región `us-east-2`) + Deno para edge functions.
@@ -64,9 +64,23 @@
 - **Desviación del spec aprobada por Hugo:** AC3 / Plan técnico 1 decía `context.go(...)` en los placeholders; implementer usó `context.push(...)` con razón documentada (con `go` se rompe AC6 back). Decisión correcta, queda como lección + follow-up de patrón.
 - **8 follow-ups no bloqueantes registrados en `.mavis/hdu.md`** (whitelist de hosts en deep link, sanitizar `errorBuilder`, restringir intent filter, mover `appRouter` a GetIt, automatizar integration test en CI, regla `push` vs `go`, `android:label` branding, renombrar test de "rotación").
 
+### HDU-005 — Auth básico (email + Google) con router redirigido por sesión (2026-07-31)
+- PR #6 mergeado a main.
+- `AuthService` con API mínima (envuelve `supabase.auth`, sin que features importen Supabase directo), register con correo/Google, login con ambos métodos, home con sign out, sesión persistente vía Supabase, redirect del router usando `AuthService`. **Decisión A del review de HDU-004 implementada:** `appRouter` en GetIt como singleton lazy.
+- **10 commits en la rama `feat/hdu-005-auth-basico`:** spec → deps → AuthService + handler + exception → router a GetIt + redirect → pantallas reales → wire main → integration test → runbook → 3 pre-merge (1 auditor + 1 fix bug test + 1 ADR-012).
+- **26 archivos modificados/creados** + 1 nuevo ADR (ADR-012).
+- **Pipeline local verificado en Xiaomi:** `flutter analyze` 0, **113/113 unit tests** verde (era 54, +59 nuevos), **3/3 integration tests** verde (`auth_flow_test.dart`), build APK OK.
+- **Aprobado por el `zeiki-auditor`** — veredicto "Limpio con notas" (1 follow-up aplicado: `hasGoogleHandler` getter muerto eliminado en `63fd262`).
+- **Aprobado por el `zeiki-reviewer`** — veredicto "🟡 Aprobado con cambios" (0 bloqueantes, 1 `issue:` de governance arquitectónico resuelto con ADR-012 + 8 no bloqueantes).
+- **Governance de ADRs formalizada:** nuevo `ADR-012-router-location-and-getit.md` que documenta (a) router a GetIt (Decisión A) y (b) la excepción de imports `core → features` del router. Tabla §13 de Target refrescada.
+- **Acciones de Hugo completadas:** SHA-1 del cert de debug, OAuth clients Android+Web, Google provider en Supabase dashboard.
+- **Compromiso "no regresión" cumplido:** 0 tests de HDUs 001-004 rotos (verificado por el implementer antes de reportar "listo" y reverificado después de cada fix pre-merge).
+- **Bug del implementer capturado en cleanup:** el integration test del implementer tenía un `authServiceGetter` que lanzaba excepción en vez de devolver un `AuthService` fake. Detectado en QA con Hugo, arreglado en `2da50b4` (registrar `_NullAuthServiceForTest` en GetIt).
+- **5 follow-ups no bloqueantes registrados en `.mavis/hdu.md`** (quitar `GoRouterRefreshStream`, extraer `_FakeAuthService`, whitelist de hosts, migrar session token a `flutter_secure_storage`, HDU-005b biometría + timer).
+
 ## 🔜 Próximos pasos sugeridos (secuencia decidida con Hugo)
 
-- **HDU-005:** Identidad / auth básico (email + Google + biometría, según Target §15). Depende de HDU-003 ✅ y HDU-004 ✅.
+- **HDU-005b:** Biometría (popup después del register) + timer de inactividad (auto-logout por seguridad). Decidido en la planning de HDU-005, queda como HDU aparte. Depende de HDU-005 ✅.
 - **HDU-006:** Splash nuevo, con feature flag + go_router + auth mínimo. Spec redactado con base en el reporte de HDU-EXPLORE-001 (qué migrar, qué descartar, qué mejorar).
 
 ## 🐛 Follow-ups activos (de HDUs cerradas)
