@@ -157,4 +157,55 @@ void main() {
       );
     });
   });
+
+  group('HDU-006 — splash detrás de feature flag (AC16, AC19)', () {
+    // El redirect del router NO consulta el feature flag (decisión
+    // arquitectónica del spec de HDU-006: el redirect decide a dónde
+    // ir, el splash decide si se muestra). El feature flag se
+    // consulta en el `SplashScreen` (no en el redirect). Por eso
+    // estos tests verifican que:
+    //
+    //   1. El redirect sigue funcionando para /splash independientemente
+    //      del flag (el redirect trata /splash como ruta pública
+    //      siempre).
+    //   2. La responsabilidad del flag es del widget, no del redirect.
+
+    test('el redirect NO depende del feature flag splash', () {
+      // Misma ruta (/splash), distintas decisiones de feature flag. El
+      // redirect siempre devuelve `null` (público). El flag no entra
+      // en la decisión.
+      expect(
+        computeAuthRedirect(goingTo: '/splash', isLoggedIn: false),
+        isNull,
+      );
+      expect(
+        computeAuthRedirect(goingTo: '/splash', isLoggedIn: true),
+        isNull,
+      );
+    });
+
+    test('la ruta /splash sigue siendo pública aunque el splash se '
+        'auto-navegue (flag OFF)', () {
+      // Cuando el feature flag `AppFeature.splash` está OFF, el
+      // `SplashScreen` consulta el flag y llama `context.go('/home')`
+      // directamente. El redirect corre para `/home` y decide el
+      // destino final (login/unlock/home según sesión + biometría).
+      // Esto es una verificación de que el redirect NO introduce
+      // una dependencia del feature flag.
+      expect(
+        computeAuthRedirect(goingTo: '/home', isLoggedIn: false),
+        '/login',
+        reason:
+            'el redirect sigue mandando a /login cuando no hay sesión, '
+            'independientemente del splash',
+      );
+      expect(
+        computeAuthRedirect(goingTo: '/home', isLoggedIn: true),
+        isNull,
+        reason:
+            'con sesión activa, /home es terminal aunque el splash haya '
+            'llamado context.go("/home") desde el flag OFF',
+      );
+    });
+  });
 }
