@@ -158,6 +158,44 @@ void main() {
     });
   });
 
+  group('SplashScreen — cache cold del TierService (HDU-006 v3)', () {
+    // **Caso de uso:** primera instalación o red caída. El cache del
+    // TierService está vacío (no hay keys en el map). El splash debe
+    // mostrarse igual (fail-safe "ON por default") porque el splash es
+    // branding, no funcionalidad. El usuario debe ver la marca al abrir
+    // la app por primera vez. Si el flag explícitamente está OFF, no
+    // se muestra (eso lo cubre el grupo "feature flag OFF" arriba).
+    //
+    // NO seteamos `tier.flags[...]` en setUp → el map queda vacío →
+    // `isCacheLoaded()` retorna `false` → el splash se muestra.
+
+    testWidgets('cache cold + sin flag explícito → splash SÍ renderiza '
+        'el branding (fail-safe "ON")', (tester) async {
+      await pumpSplash(tester);
+
+      // El branding debe estar presente aunque el cache esté frío.
+      expect(find.text('ZEIKI'), findsOneWidget,
+          reason: 'con cache cold (sin refresh previo), el splash debe '
+              'mostrar el branding por default (fail-safe ON)');
+      expect(find.text('LOADING'), findsOneWidget,
+          reason: 'mismo motivo: el "LOADING" es parte del branding');
+    });
+
+    testWidgets('cache cold + flag explícito OFF en Supabase → splash NO '
+        'renderiza el branding (el OFF explícito gana)', (tester) async {
+      // Simula que el refresh ya terminó y trajo `splash = false` desde
+      // Supabase. El cache está cargado (1 key), pero el flag es OFF.
+      tier.flags[AppFeature.splash] = false;
+
+      await pumpSplash(tester);
+
+      expect(find.text('ZEIKI'), findsNothing,
+          reason: 'con cache loaded + flag OFF, el splash se salta');
+      expect(find.text('LOADING'), findsNothing,
+          reason: 'mismo motivo');
+    });
+  });
+
   group('SplashScreen — feature flag OFF (AC2)', () {
     setUp(() {
       tier.flags[AppFeature.splash] = false;
@@ -233,6 +271,9 @@ class _FakeTierService implements TierService {
 
   @override
   bool has(AppFeature feature) => flags[feature] ?? false;
+
+  @override
+  bool isCacheLoaded() => flags.isNotEmpty;
 
   @override
   Stream<TierChange> get changes => const Stream<TierChange>.empty();

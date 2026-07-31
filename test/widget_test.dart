@@ -251,6 +251,9 @@ class _FakeTierService implements TierService {
   bool has(AppFeature feature) => flags[feature] ?? false;
 
   @override
+  bool isCacheLoaded() => flags.isNotEmpty;
+
+  @override
   Stream<TierChange> get changes => const Stream<TierChange>.empty();
 
   @override

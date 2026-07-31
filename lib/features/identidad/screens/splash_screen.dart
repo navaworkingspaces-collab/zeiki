@@ -104,8 +104,18 @@ class _SplashViewState extends State<_SplashView>
     // El TierService se consulta UNA vez al construir; si el flag
     // cambia después, NO afecta a este splash (es OK — los flags no
     // se "apagan" en runtime, se apagan en deploy).
+    //
+    // **HDU-006 v3 — fail-safe a "mostrar por default":** si el cache del
+    // TierService está frío (primera instalación, red caída, refresh
+    // aún no completa), mostramos el splash. La razón: el splash es
+    // branding, no funcionalidad, y queremos que el usuario SIEMPRE
+    // vea la marca al abrir la app por primera vez. Si el flag
+    // explícitamente está OFF en Supabase, no se muestra.
+    // (Decisión registrada por el reviewer HDU-006 v2 como question
+    // no-bloqueante del Gate 2; resuelta en este commit para que QA
+    // pueda ver el splash en la primera instalación.)
     final tier = getIt<TierService>();
-    _splashEnabled = tier.has(AppFeature.splash);
+    _splashEnabled = tier.has(AppFeature.splash) || !tier.isCacheLoaded();
 
     _entryController = AnimationController(
       duration: const Duration(milliseconds: 2500),
