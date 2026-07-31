@@ -16,14 +16,25 @@
 //   ser una variable global mutable y se obtiene de GetIt con
 //   `getIt<GoRouter>()`. Esto le permite al `redirect` del router
 //   consultar `AuthService` (también en GetIt) en cada navegación.
+// HDU-005b: 2 adiciones principales:
+//   1. **Cold start decision:** si hay sesión persistida +
+//      `biometricEnabled`, se hace `router.go('/unlock')` ANTES del
+//      primer frame (override el initial location `/splash`).
+//   2. **InactivityMonitor:** envuelve `MaterialApp` y dispara
+//      `signOut` después de 5 minutos sin interacción. El timer
+//      sigue corriendo en background (matchea bancos).
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:go_router/go_router.dart';
 
 import 'core/auth/auth_service.dart';
+import 'core/auth/auth_service_config.dart';
+import 'core/auth/biometric_service.dart';
+import 'core/auth/inactivity_monitor.dart';
 import 'core/constants/env_config.dart';
 import 'core/di/service_locator.dart';
 import 'core/router/app_links_handler.dart';
+import 'core/router/app_router.dart';
 import 'core/supabase/supabase_client.dart';
 import 'core/tiers/tier_service.dart';
 
@@ -54,7 +65,8 @@ Future<void> main() async {
   // Registra los singletons lazy en GetIt (ADR-005, ADR-011). Se hace
   // DESPUÉS de Supabase para que cualquier singleton que lo necesite
   // ya lo encuentre inicializado. `setupServiceLocator` ahora registra
-  // también `AuthService`, `GoogleSignInHandler` y `GoRouter` (HDU-005).
+  // también `AuthService`, `GoogleSignInHandler`, `BiometricService`
+  // y `GoRouter` (HDU-005 + HDU-005b).
   setupServiceLocator();
 
   // Pre-calienta `AuthService` para que `getCurrentSession()` esté
@@ -62,6 +74,30 @@ Future<void> main() async {
   // podría leer `null` cuando en realidad hay una sesión persistida
   // (caso cold start con sesión viva — AC20, AC25).
   getIt<AuthService>();
+
+  // HDU-005b (AC10, AC15, AC16): cold start decision.
+  // Si hay sesión persistida + `biometricEnabled` para ese userId,
+  // el initial location cambia a `/unlock` (pide huella antes de
+  // /home). Esto se hace ANTES del `runApp` para evitar el flash
+  // del splash.
+  final auth = getIt<AuthService>();
+  final biometric = getIt<BiometricService>();
+  final router = getIt<GoRouter>();
+  final session = auth.getCurrentSession();
+  if (session != null) {
+    final userId = auth.currentUserId;
+    if (userId != null) {
+      final isBiometricEnabled =
+          await biometric.isBiometricEnabled(userId: userId);
+      if (isBiometricEnabled) {
+        // Override el initial location a /unlock.
+        // `router.go` ejecuta el redirect, pero el redirect de
+        // /unlock es null (terminal — el UnlockScreen decide), así
+        // que la app arranca directamente en el unlock.
+        router.go(AppRoute.unlock.path);
+      }
+    }
+  }
 
   // Dispara el refresh inicial de los feature flags en background
   // (fire-and-forget, AC8 de HDU-003). El `await` solo bloquea la
@@ -71,13 +107,17 @@ Future<void> main() async {
   // `false` por fail-safe) y se loguea un warning — la UI no se rompe.
   await TierService.getInstance().initialize();
 
-  // El router se obtiene de GetIt (HDU-005, Decisión A del review de
-  // HDU-004). La factory `buildAppRouter` se evaluó al primer
-  // `getIt<GoRouter>()` dentro de `setupServiceLocator` y queda
-  // cacheada — esta llamada es la misma instancia.
-  final router = getIt<GoRouter>();
-
-  runApp(ZeikiApp(router: router));
+  // HDU-005b (AC17-AC21): envolver la app en `InactivityMonitor`.
+  // El monitor detecta taps/scrolls y dispara `signOut` después de
+  // 5 minutos sin interacción. El timer sigue corriendo en
+  // background (matchea bancos).
+  runApp(
+    InactivityMonitor(
+      config: const AuthServiceConfig(),
+      signOutFn: () => getIt<AuthService>().signOut(),
+      child: ZeikiApp(router: router),
+    ),
+  );
 
   // HDU-004 AC5: cablea los deep links `zeiki://<ruta>` al router.
   // Se hace DESPUÉS de `runApp` para que el router ya esté montado
