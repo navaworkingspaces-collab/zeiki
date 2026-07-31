@@ -29,7 +29,7 @@ import 'package:go_router/go_router.dart';
 
 import 'core/auth/auth_service.dart';
 import 'core/auth/auth_service_config.dart';
-import 'core/auth/biometric_service.dart';
+import 'core/services/biometric_service.dart';
 import 'core/auth/inactivity_monitor.dart';
 import 'core/constants/env_config.dart';
 import 'core/di/service_locator.dart';

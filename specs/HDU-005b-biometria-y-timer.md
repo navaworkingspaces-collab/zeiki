@@ -96,7 +96,7 @@
 ### `BiometricService` separado de `AuthService`
 
 - `AuthService` se mantiene enfocado en Supabase (register, login, logout, session).
-- Nuevo `BiometricService` en `lib/core/auth/biometric_service.dart` encapsula la lógica de huella:
+- Nuevo `BiometricService` en `lib/core/services/biometric_service.dart` encapsula la lógica de huella:
   - `isBiometricAvailable()` — checa si el dispositivo tiene huella/cara configurada.
   - `authenticate(reason)` — dispara el popup del SO.
   - `setBiometricEnabled(bool)` / `isBiometricEnabled()` — persiste el flag en `flutter_secure_storage`.
@@ -125,7 +125,7 @@ El `zeiki-reviewer` de HDU-004 también dejó como follow-up explícito conectar
 
 ### BiometricService
 
-- [ ] **AC1:** `lib/core/auth/biometric_service.dart` declara la clase `BiometricService` con API: `isBiometricAvailable()` (Future<bool>), `authenticate(String reason)` (Future<bool>), `setBiometricEnabled(bool)` (Future<void>), `isBiometricEnabled({String userId})` (Future<bool>).
+- [ ] **AC1:** `lib/core/services/biometric_service.dart` declara la clase `BiometricService` con API: `isBiometricAvailable()` (Future<bool>), `authenticate(String reason)` (Future<bool>), `setBiometricEnabled(bool)` (Future<void>), `isBiometricEnabled({String userId})` (Future<bool>).
 - [ ] **AC2:** `BiometricService` está registrado en GetIt como singleton lazy en `lib/core/di/service_locator.dart`.
 - [ ] **AC3:** El flag `biometricEnabled` se guarda en `flutter_secure_storage` con KEY por usuario: `biometric_enabled_<user_id>`. Se lee con la misma KEY.
 - [ ] **AC4:** Si el dispositivo no tiene biometría configurada (huella/cara deshabilitadas en el SO), `isBiometricAvailable()` devuelve `false` y la app NO ofrece el popup de activación.
@@ -173,7 +173,7 @@ El `zeiki-reviewer` de HDU-004 también dejó como follow-up explícito conectar
 
 ### Tests
 
-- [ ] **AC25:** `test/core/auth/biometric_service_test.dart` cubre con fakes: `isBiometricAvailable` según el SO, `authenticate` éxito y fallo, `setBiometricEnabled` + `isBiometricEnabled` round-trip en secure storage, KEY por usuario.
+- [ ] **AC25:** `test/core/services/biometric_service_test.dart` cubre con fakes: `isBiometricAvailable` según el SO, `authenticate` éxito y fallo, `setBiometricEnabled` + `isBiometricEnabled` round-trip en secure storage, KEY por usuario.
 - [ ] **AC26:** `test/core/auth/inactivity_monitor_test.dart` cubre: tap resetea el timer, scroll resetea el timer, no-interacción por X tiempo llama a `signOut` + navega a `/login`.
 - [ ] **AC27:** `test/features/identidad/screens/unlock_screen_test.dart` cubre: huella válida → navega a `/home`, huella falla 3 veces → fallback a `/login`, usuario cancela → botón "Usar contraseña".
 - [ ] **AC28:** `test/features/identidad/screens/activation_dialog_test.dart` cubre: el popup aparece una vez, "Activar" llama a `authenticate`, "Ahora no" cierra sin guardar.
@@ -191,12 +191,12 @@ El `zeiki-reviewer` de HDU-004 también dejó como follow-up explícito conectar
 
 **Nuevos:**
 
-- `lib/core/auth/biometric_service.dart` — `BiometricService` con la API del AC1.
+- `lib/core/services/biometric_service.dart` — `BiometricService` con la API del AC1.
 - `lib/core/auth/inactivity_monitor.dart` — detecta taps/scrolls/gestos, resetea el timer, llama a `signOut` después de X min.
 - `lib/core/auth/auth_service_config.dart` — `const AuthServiceConfig { inactivityTimeout = Duration(minutes: 5) }`.
 - `lib/features/identidad/screens/unlock_screen.dart` — pantalla de "Desbloquear con huella".
 - `lib/features/identidad/widgets/biometric_activation_dialog.dart` — el popup modal.
-- `test/core/auth/biometric_service_test.dart` — unit tests.
+- `test/core/services/biometric_service_test.dart` — unit tests.
 - `test/core/auth/inactivity_monitor_test.dart` — unit tests.
 - `test/features/identidad/screens/unlock_screen_test.dart` — widget tests.
 - `test/features/identidad/widgets/biometric_activation_dialog_test.dart` — widget tests.
@@ -223,7 +223,7 @@ El `zeiki-reviewer` de HDU-004 también dejó como follow-up explícito conectar
 
 1. **Agregar `local_auth: ^2.3.0` a `pubspec.yaml`.** Confirmar versión compatible con Flutter 3.38.3.
 2. **Crear `lib/core/auth/auth_service_config.dart`** — `const AuthServiceConfig { inactivityTimeout = Duration(minutes: 5) }`.
-3. **Crear `lib/core/auth/biometric_service.dart`** — la clase con la API del AC1. Usa `local_auth` internamente para `authenticate` y `canCheckBiometrics`. Usa `flutter_secure_storage` para el flag.
+3. **Crear `lib/core/services/biometric_service.dart`** — la clase con la API del AC1. Usa `local_auth` internamente para `authenticate` y `canCheckBiometrics`. Usa `flutter_secure_storage` para el flag.
 4. **Crear `lib/core/auth/inactivity_monitor.dart`** — un `StatefulWidget` o un `Notifier` que envuelve la app. Usa un `Timer` que se resetea con cada interacción (`Listener` widget o `WidgetsBindingObserver`).
 5. **Modificar `lib/core/di/service_locator.dart`:**
    - Registrar `BiometricService` y `InactivityMonitor`.
@@ -235,7 +235,7 @@ El `zeiki-reviewer` de HDU-004 también dejó como follow-up explícito conectar
 10. **Modificar `lib/features/identidad/screens/home_screen.dart`** — agregar botón "Activar/Desactivar biometría" en un `PopupMenuButton` (settings chiquito).
 11. **Modificar `lib/main.dart`** — envolver la app en `InactivityMonitor`. Iniciar el monitor después de `runApp` (o el monitor se auto-inicia con el widget).
 12. **Tests:**
-   - `test/core/auth/biometric_service_test.dart` con fakes.
+   - `test/core/services/biometric_service_test.dart` con fakes.
    - `test/core/auth/inactivity_monitor_test.dart` con `fakeAsync` para controlar el tiempo.
    - `test/features/identidad/screens/unlock_screen_test.dart` widget tests.
    - `test/features/identidad/widgets/biometric_activation_dialog_test.dart` widget tests.

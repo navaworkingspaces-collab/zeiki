@@ -1,5 +1,6 @@
 // Router declarativo de Zeiki (HDU-004 base, HDU-005 extiende, HDU-005b
 // biometría + unlock).
+import 'dart:async';
 //
 // Cambios de HDU-005:
 //   - **Decisión A (review de HDU-004):** `appRouter` deja de ser una
@@ -20,10 +21,6 @@
 //     `UnlockScreen` se muestra cuando el cold start tiene sesión
 //     persistida Y `biometricEnabled` para ese userId. Pide huella
 //     antes de dejar pasar al usuario a /home.
-//   - **`buildAppRouter` recibe `biometricServiceGetter` (AC22):** se
-//     consulta en el **cold start decision** (definido en
-//     `service_locator.dart`) para elegir el `initialLocation`:
-//     `/unlock` si hay sesión + biometría, `/splash` en otro caso.
 //   - **`refreshStream` finalmente se conecta (AC22-24):** el
 //     `GoRouterRefreshStream` que HDU-005 dejó construido se conecta
 //     al `authStateChanges` del `AuthService`. Resultado: `signOut`
@@ -113,13 +110,6 @@ String? computeAuthRedirect({
 /// `AuthService` en `getIt` sin tener que reconstruir el router
 /// (conventions §3).
 ///
-/// `biometricServiceGetter` también se inyecta por consistencia con
-/// la API, pero el **redirect** no la consulta — la decisión de
-/// biometría vive en el cold start (en `service_locator.dart` que
-/// pasa el `initialLocation` correcto). Se mantiene en la firma
-/// para uso futuro (ej. deshabilitar biometría desde un settings que
-/// necesita re-evaluar el cold start).
-///
 /// `refreshStream` se conecta al `authStateChanges` para que el
 /// router re-evalúe el `redirect` cuando el user hace signOut (sin
 /// esperar la próxima navegación). Por default es null — el redirect
@@ -202,7 +192,7 @@ class GoRouterRefreshStream extends ChangeNotifier {
         );
   }
 
-  late final dynamic _subscription;
+  late final StreamSubscription<void> _subscription;
 
   @override
   void dispose() {

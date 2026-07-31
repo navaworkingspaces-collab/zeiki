@@ -11,7 +11,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:zeiki/core/auth/biometric_service.dart';
+import 'package:zeiki/core/services/biometric_service.dart';
 import 'package:zeiki/features/identidad/widgets/biometric_activation_dialog.dart';
 
 // ====================================================================

@@ -55,7 +55,7 @@ dependencies:
   cupertino_icons: ^1.0.8
 
   # Autenticación biométrica (huella/cara del SO) para Zeiki (HDU-005b).
-  # Wrapper local en `lib/core/auth/biometric_service.dart` para mantener
+  # Wrapper local en `lib/core/services/biometric_service.dart` para mantener
   # el plugin aislado del código de feature y permitir fakes en tests
   # (conventions §3). Requiere:
   #   - Android: `MainActivity` debe extender `FlutterFragmentActivity`

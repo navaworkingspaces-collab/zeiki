@@ -26,7 +26,7 @@ import 'package:supabase_flutter/supabase_flutter.dart' as sb;
 
 import 'package:zeiki/core/auth/auth_service.dart';
 import 'package:zeiki/core/auth/auth_service_config.dart';
-import 'package:zeiki/core/auth/biometric_service.dart';
+import 'package:zeiki/core/services/biometric_service.dart';
 import 'package:zeiki/core/auth/inactivity_monitor.dart';
 import 'package:zeiki/core/di/service_locator.dart';
 import 'package:zeiki/core/router/app_router.dart';

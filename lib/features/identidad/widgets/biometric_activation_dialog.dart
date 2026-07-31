@@ -15,7 +15,7 @@
 // cerrar la app.
 import 'package:flutter/material.dart';
 
-import '../../../core/auth/biometric_service.dart';
+import '../../../core/services/biometric_service.dart';
 
 /// Servicio que decide si mostrar el popup de "¿Activar huella?"
 /// después del register/login (HDU-005b, AC7, AC8).

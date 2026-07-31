@@ -19,7 +19,7 @@ import 'package:get_it/get_it.dart';
 import 'package:go_router/go_router.dart';
 
 import '../auth/auth_service.dart';
-import '../auth/biometric_service.dart';
+import '../services/biometric_service.dart';
 import '../auth/google_sign_in_handler.dart';
 import '../router/app_router.dart';
 import '../tiers/tier_service.dart';
@@ -88,11 +88,6 @@ void setupServiceLocator() {
   // `GoRouter.refreshListenable` vía `refreshStream`. Resultado:
   // `signOut` desde cualquier pantalla hace que el router
   // re-evalúe el `redirect` automáticamente (sin tocar la pantalla).
-  // También pasamos el `biometricServiceGetter` por consistencia con
-  // la API (el redirect no lo consulta — la decisión de biometría
-  // vive en el cold start que `main.dart` orquesta, ver
-  // `app_router.dart` §"Por qué el redirect NO consulta
-  // biometricEnabled").
   //
   // **HDU-005b (AC10, AC15, AC16):** el `initialLocation` default
   // es `/splash`. Si el cold start tiene sesión + biometría,

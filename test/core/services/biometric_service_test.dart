@@ -19,7 +19,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:local_auth/local_auth.dart' as la;
 
-import 'package:zeiki/core/auth/biometric_service.dart';
+import 'package:zeiki/core/services/biometric_service.dart';
 
 // ====================================================================
 // Fakes (top-level para que Dart 3.x parsee bien)
