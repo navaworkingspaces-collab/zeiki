@@ -23,8 +23,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/auth/auth_exception.dart';
 import '../../../core/auth/auth_service.dart';
+import '../../../core/auth/biometric_service.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../core/router/app_router.dart';
+import '../widgets/biometric_activation_dialog.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -67,6 +69,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
         password: _passwordCtrl.text,
       );
       if (!mounted) return;
+      // HDU-005b AC5-AC9: popup "¿Activar huella?" después del primer
+      // register exitoso. One-shot por sesión (ver
+      // BiometricActivationService). Se muestra ANTES de navegar a
+      // /home para que el user decida en el mismo flujo.
+      await _maybeShowBiometricActivationDialog(context);
       // El router se encarga del resto vía `redirect`: si hay sesión,
       // /home está OK. Aquí navegamos explícitamente para que la
       // transición sea inmediata, sin esperar la próxima navegación.
@@ -97,6 +104,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
     try {
       await auth.signInWithGoogle();
       if (!mounted) return;
+      // HDU-005b AC5-AC9: mismo popup que en el flujo de email.
+      await _maybeShowBiometricActivationDialog(context);
       router.go(AppRoute.home.path);
     } on UserCancelledAuthFlow {
       // AC10: cancelar el popup NO es error. La pantalla se queda
@@ -200,6 +209,35 @@ class _RegisterScreenState extends State<RegisterScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  // ============================================================
+  // Biometría (HDU-005b, AC5-AC9)
+  // ============================================================
+
+  /// Muestra el popup "¿Activar huella?" si aplica (one-shot por
+  /// sesión). Se llama después de un register/login exitoso, ANTES
+  /// de navegar a /home. Si el user ya tiene biometría activada, o
+  /// si el dispositivo no soporta biometría, o si ya se mostró en
+  /// esta sesión, el popup no aparece (el service consume
+  /// atómicamente).
+  Future<void> _maybeShowBiometricActivationDialog(
+    BuildContext context,
+  ) async {
+    final auth = getIt<AuthService>();
+    final biometric = getIt<BiometricService>();
+    final activation = BiometricActivationService(biometric: biometric);
+    final userId = auth.currentUserId;
+    if (userId == null) return;
+    if (!await activation.consumeIfShouldShow(userId: userId)) return;
+    if (!context.mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (_) => BiometricActivationDialog(
+        biometric: biometric,
+        userId: userId,
       ),
     );
   }
