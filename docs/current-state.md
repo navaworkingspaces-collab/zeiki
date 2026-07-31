@@ -2,14 +2,14 @@
 
 > **Snapshot rápido del estado del proyecto.** Se actualiza en el cleanup (paso 12) de cada HDU cerrada. Para el detalle de una HDU específica, ver `specs/HDU-XXX-*.md`. Para el histórico, ver `.mavis/hdu.md`.
 
-**Última actualización:** 2026-07-31 (post-HDU-005 cerrada).
+**Última actualización:** 2026-07-31 (post-HDU-005b cerrada).
 
 ---
 
 ## 📍 Dónde estamos
 
 - **Fase:** 1 (MVP).
-- **Última HDU cerrada:** HDU-005 — Auth básico (email + Google).
+- **Última HDU cerrada:** HDU-005b — Biometría + timer de inactividad.
 - **HDUs activas:** ninguna.
 - **Rama `main`:** deployable.
 - **Stack operativo:** Flutter 3.38.3 + Supabase (proyecto Zeiki, región `us-east-2`) + Deno para edge functions.
@@ -78,10 +78,25 @@
 - **Bug del implementer capturado en cleanup:** el integration test del implementer tenía un `authServiceGetter` que lanzaba excepción en vez de devolver un `AuthService` fake. Detectado en QA con Hugo, arreglado en `2da50b4` (registrar `_NullAuthServiceForTest` en GetIt).
 - **5 follow-ups no bloqueantes registrados en `.mavis/hdu.md`** (quitar `GoRouterRefreshStream`, extraer `_FakeAuthService`, whitelist de hosts, migrar session token a `flutter_secure_storage`, HDU-005b biometría + timer).
 
+### HDU-005b — Biometría + timer de inactividad (2026-07-31)
+- PR #7 mergeado a main.
+- `BiometricService` con API mínima (flag en `flutter_secure_storage` con KEY por usuario, defensa contra `PlatformException`), `InactivityTimer` con default de 5 min (constante en `AuthServiceConfig`), `BiometricActivationDialog` one-shot por sesión, `UnlockScreen` con 3 intentos antes de fallback, y **`authStateChanges` finalmente conectado al `GoRouter.refreshListenable`** (cierra el follow-up #1 de HDU-005 / ADR-012).
+- **12 commits en la rama `feat/hdu-005b-biometria-timer`:** spec → deps → BiometricService → AuthServiceConfig → InactivityTimer + Monitor → BiometricActivationService + Dialog → UnlockScreen → router wireup + /unlock → MainActivity + USE_BIOMETRIC → wire dialog post-login → settings en Home → integration tests → update tests → 2 pre-merge (1 auditor cleanup + 1 move a services/ + reviewer's fixes).
+- **23 archivos modificados/creados** + refactor: `BiometricService` movido de `lib/core/auth/` a `lib/core/services/` (Target §6 lo requiere explícitamente).
+- **Pipeline local verificado en Xiaomi:** `flutter analyze` 0, **155/155 unit tests** verde (era 113 en HDU-005, +42 nuevos), **2/2 integration tests** verde (`biometric_flow_test.dart`), build APK OK.
+- **Aprobado por el `zeiki-auditor`** — veredicto "Limpio con notas" (3 fixes pre-merge: parámetro YAGNI removido, 2 imports no usados, comentario del flash alineado).
+- **Aprobado por el `zeiki-reviewer`** — veredicto "🟡 Aprobado con cambios" (0 bloqueantes, 1 `issue:` de Target §6 resuelto con move de `BiometricService` a `services/`, 3 stale comments eliminados, 1 tipo incorrecto corregido, 6 no bloqueantes).
+- **Cambios en Android:** `MainActivity` cambiada a `FlutterFragmentActivity` (requerido por `local_auth` 2.x), permiso `USE_BIOMETRIC` agregado al manifest.
+- **Acciones de Hugo completadas:** huella activada en el Xiaomi, integration test ejecutado.
+- **Compromiso "no regresión" cumplido:** 0 tests de HDUs 001-005 rotos.
+- **Desviaciones del spec (ambas aprobadas por lógica):**
+  - **AC14:** "Usar contraseña" hace `signOut` + `/login` (no solo navegar). Spec original causaba loop. Documentado.
+  - **Move de `BiometricService` a `services/`:** el spec lo ponía en `auth/`, contradiciendo Target §6. Se corrigió.
+- **5 follow-ups no bloqueantes registrados en `.mavis/hdu.md`** (extraer `_FakeBiometricService` a helper, whitelist de "último userId" post-logout, migrar session token a `flutter_secure_storage`, pre-cargar cache de `BiometricService`, HDU-006).
+
 ## 🔜 Próximos pasos sugeridos (secuencia decidida con Hugo)
 
-- **HDU-005b:** Biometría (popup después del register) + timer de inactividad (auto-logout por seguridad). Decidido en la planning de HDU-005, queda como HDU aparte. Depende de HDU-005 ✅.
-- **HDU-006:** Splash nuevo, con feature flag + go_router + auth mínimo. Spec redactado con base en el reporte de HDU-EXPLORE-001 (qué migrar, qué descartar, qué mejorar).
+- **HDU-006:** Splash nuevo, con feature flag + go_router + auth mínimo. Spec redactado con base en el reporte de HDU-EXPLORE-001 (qué migrar, qué descartar, qué mejorar). Depende de HDU-003 ✅, HDU-004 ✅, HDU-005 ✅, HDU-005b ✅.
 
 ## 🐛 Follow-ups activos (de HDUs cerradas)
 
