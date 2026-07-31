@@ -47,7 +47,7 @@ void main() {
     // inside GetIt`.
     //
     // **NO QUITAR.** Si parece redundante, leer el comentario de arriba.
-    setupServiceLocator();
+    setupServiceLocator(env);
   });
 
   // Reset entre tests: el singleton conserva el cache y su
@@ -65,7 +65,11 @@ void main() {
       getIt<TierService>().dispose();
     }
     getIt.reset();
-    setupServiceLocator();
+    // BUG-001: setupServiceLocator ahora toma el `EnvConfig` como
+    // parámetro. Recargamos el `.env` para tener el `env` actualizado
+    // (los tests individuales pueden haber mutado variables).
+    final env = EnvConfig.fromDotEnv(dotenv);
+    setupServiceLocator(env);
   });
 
   test('refresh real actualiza el cache con `splash=true` (AC8)', () async {
