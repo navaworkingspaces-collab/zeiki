@@ -1,4 +1,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- HDU-005b: `local_auth` necesita este permiso para mostrar el
+         `BiometricPrompt` (huella/cara) en Android 9+ (API 28+). En API
+         < 28 se usa `USE_FINGERPRINT` (deprecated pero conservado por
+         compatibilidad con devices viejos). Sin esto, `authenticate()`
+         lanza `SecurityException` en runtime. -->
+    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
+    <uses-permission android:name="android.permission.USE_FINGERPRINT" />
     <application
         android:label="zeiki"
         android:name="${applicationName}"
