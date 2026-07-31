@@ -60,7 +60,6 @@ void main() {
     // lanzar excepciones.
     final router = buildAppRouter(
       authServiceGetter: () => getIt<AuthService>(),
-      biometricServiceGetter: () => getIt<BiometricService>(),
     );
     addTearDown(router.dispose);
 

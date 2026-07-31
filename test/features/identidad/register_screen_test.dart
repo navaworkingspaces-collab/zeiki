@@ -50,7 +50,6 @@ void main() {
     // router.
     router = buildAppRouter(
       authServiceGetter: () => getIt<AuthService>(),
-      biometricServiceGetter: () => getIt<BiometricService>(),
     );
     // El router empieza en /splash. Lo movemos a /register.
     router.go(AppRoute.register.path);

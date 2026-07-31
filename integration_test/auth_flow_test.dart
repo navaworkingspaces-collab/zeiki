@@ -69,7 +69,7 @@ void main() {
       // El getter resuelve el AuthService desde GetIt (registrado en
       // setUpAll). El fake devuelve `null` → redirect a /login.
       authServiceGetter: () => getIt<AuthService>(),
-      biometricServiceGetter: () => getIt<BiometricService>(),
+
     );
     addTearDown(router.dispose);
 
@@ -87,7 +87,7 @@ void main() {
       (WidgetTester tester) async {
     final router = buildAppRouter(
       authServiceGetter: () => getIt<AuthService>(),
-      biometricServiceGetter: () => getIt<BiometricService>(),
+
     );
     addTearDown(router.dispose);
 
@@ -109,7 +109,7 @@ void main() {
       'y "Continuar con Google"', (WidgetTester tester) async {
     final router = buildAppRouter(
       authServiceGetter: () => getIt<AuthService>(),
-      biometricServiceGetter: () => getIt<BiometricService>(),
+
     );
     addTearDown(router.dispose);
 

@@ -30,7 +30,6 @@ import 'package:zeiki/core/auth/auth_service.dart';
 import 'package:zeiki/core/auth/biometric_service.dart';
 import 'package:zeiki/core/di/service_locator.dart';
 import 'package:zeiki/core/router/app_router.dart';
-import 'package:zeiki/features/identidad/screens/unlock_screen.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -56,7 +55,6 @@ void main() {
   testWidgets('AC15: /unlock existe en la tabla de rutas', (tester) async {
     final router = buildAppRouter(
       authServiceGetter: () => getIt<AuthService>(),
-      biometricServiceGetter: () => getIt<BiometricService>(),
     );
     addTearDown(router.dispose);
 
@@ -73,7 +71,6 @@ void main() {
     // contraseña".
     final router = buildAppRouter(
       authServiceGetter: () => getIt<AuthService>(),
-      biometricServiceGetter: () => getIt<BiometricService>(),
     );
     addTearDown(router.dispose);
 
@@ -138,8 +135,7 @@ class _NullBiometricServiceForTest implements BiometricService {
   Future<void> setBiometricEnabled(bool enabled, {required String userId}) async {}
 }
 
-/// Helper importado para que el `import 'unlock_screen.dart'` no
-/// quede como "unused" — la pantalla se instancia por el router,
-// no directamente en este test.
-// ignore: unused_element
-const _kUnlockScreenTypeMarker = UnlockScreen;
+// (El import de `unlock_screen.dart` y el marker de tipo se eliminaron
+// en el cleanup pre-merge. La pantalla se instancia por el router, no
+// directamente en este test, así que ni el import ni el marker son
+// necesarios.)

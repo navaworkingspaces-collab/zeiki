@@ -10,7 +10,6 @@
 // el texto y los 2 botones del spec (AC5).
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:supabase_flutter/supabase_flutter.dart' as sb;
 
 import 'package:zeiki/core/auth/biometric_service.dart';
 import 'package:zeiki/features/identidad/widgets/biometric_activation_dialog.dart';
@@ -234,9 +233,4 @@ void main() {
       expect(find.text('Ahora no'), findsNothing);
     });
   });
-
-  // Evitar el warning de sb.User no usado (lo importamos para que el
-  // archivo compile si en el futuro se necesita).
-  // ignore: unused_local_variable
-  final _ = sb.User;
 }

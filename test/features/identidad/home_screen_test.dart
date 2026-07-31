@@ -30,7 +30,6 @@ void main() {
 
     router = buildAppRouter(
       authServiceGetter: () => getIt<AuthService>(),
-      biometricServiceGetter: () => getIt<BiometricService>(),
     );
 
     // El test empieza con sesión activa (seteamos en el helper).

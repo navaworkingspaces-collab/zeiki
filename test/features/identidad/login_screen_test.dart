@@ -40,7 +40,6 @@ void main() {
 
     router = buildAppRouter(
       authServiceGetter: () => getIt<AuthService>(),
-      biometricServiceGetter: () => getIt<BiometricService>(),
     );
     router.go(AppRoute.login.path);
   });

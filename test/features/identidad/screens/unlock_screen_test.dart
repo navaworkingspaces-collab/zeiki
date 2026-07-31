@@ -140,7 +140,6 @@ void main() {
 
     router = buildAppRouter(
       authServiceGetter: () => getIt<AuthService>(),
-      biometricServiceGetter: () => getIt<BiometricService>(),
     );
     // Forzamos ir a /unlock. El redirect acepta /unlock como
     // terminal (ver `computeAuthRedirect`), así que no se redirige.

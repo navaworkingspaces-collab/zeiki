@@ -41,7 +41,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../auth/auth_service.dart';
-import '../auth/biometric_service.dart';
 import '../../features/identidad/screens/home_screen.dart';
 import '../../features/identidad/screens/login_screen.dart';
 import '../../features/identidad/screens/register_screen.dart';
@@ -132,18 +131,9 @@ String? computeAuthRedirect({
 /// biometría habilitada. Default: `/splash`.
 GoRouter buildAppRouter({
   required AuthService Function() authServiceGetter,
-  required BiometricService Function() biometricServiceGetter,
   Stream<void>? refreshStream,
   String initialLocation = '/splash',
 }) {
-  // El biometricServiceGetter queda en la firma para que el caller
-  // lo inyecte (consistencia con el service_locator) aunque el
-  // redirect no lo consulte hoy. Se referencia una vez para
-  // silenciar el warning de "unused_local_variable" en builds
-  // estrictos (la firma es parte del contrato público).
-  // ignore: unused_local_variable
-  final biometricServiceHolder = biometricServiceGetter;
-
   return GoRouter(
     initialLocation: initialLocation,
     routes: <RouteBase>[

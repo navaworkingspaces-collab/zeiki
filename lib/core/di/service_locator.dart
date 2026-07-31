@@ -113,7 +113,6 @@ void setupServiceLocator() {
       // el router sin tener que reconstruirlo.
       () => buildAppRouter(
         authServiceGetter: () => getIt<AuthService>(),
-        biometricServiceGetter: () => getIt<BiometricService>(),
         refreshStream: getIt<AuthService>().authStateChanges,
       ),
     );

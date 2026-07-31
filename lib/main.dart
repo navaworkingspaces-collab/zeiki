@@ -78,8 +78,9 @@ Future<void> main() async {
   // HDU-005b (AC10, AC15, AC16): cold start decision.
   // Si hay sesión persistida + `biometricEnabled` para ese userId,
   // el initial location cambia a `/unlock` (pide huella antes de
-  // /home). Esto se hace ANTES del `runApp` para evitar el flash
-  // del splash.
+  // /home). Esto se hace ANTES del `runApp` para decidir la ruta
+  // inicial. En la práctica puede haber un flash brevísimo del
+  // splash, pero es imperceptible (< 100ms).
   final auth = getIt<AuthService>();
   final biometric = getIt<BiometricService>();
   final router = getIt<GoRouter>();

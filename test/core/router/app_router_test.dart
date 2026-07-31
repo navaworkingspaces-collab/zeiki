@@ -40,7 +40,6 @@ void main() {
     getIt.registerSingleton<BiometricService>(fakeBiometric);
     router = buildAppRouter(
       authServiceGetter: () => getIt<AuthService>(),
-      biometricServiceGetter: () => getIt<BiometricService>(),
     );
   });
 
