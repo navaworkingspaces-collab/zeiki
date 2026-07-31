@@ -316,14 +316,11 @@ class _SplashViewState extends State<_SplashView>
       builder: (BuildContext context, Widget? child) {
         return Opacity(
           opacity: _logoOpacity.value,
-          child: Transform.translate(
-            offset: Offset.zero,
-            child: Transform.rotate(
-              angle: _logoRotation.value,
-              child: Transform.scale(
-                scale: _logoScale.value,
-                child: child,
-              ),
+          child: Transform.rotate(
+            angle: _logoRotation.value,
+            child: Transform.scale(
+              scale: _logoScale.value,
+              child: child,
             ),
           ),
         );

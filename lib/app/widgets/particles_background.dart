@@ -5,7 +5,7 @@
 //
 //   - `Random()` reemplazado por una instancia única de `dart:math` para
 //     no recrearla en cada partícula (era funcional pero ineficiente).
-//   - Comentarios migrados a `// ✅ ...`风格的 "por qué" (conventions §2).
+//   - Comentarios migrados a `// ✅ ...` estilo "por qué" (conventions §2).
 //   - `pow` de `dart:math` (no `import 'dart:math'` implícito).
 //
 // **Comportamiento:** 50 partículas púrpura semi-transparentes que
