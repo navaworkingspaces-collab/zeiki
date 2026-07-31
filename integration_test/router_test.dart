@@ -39,6 +39,8 @@ import 'package:supabase_flutter/supabase_flutter.dart' as sb;
 
 import 'package:zeiki/core/auth/auth_exception.dart';
 import 'package:zeiki/core/auth/auth_service.dart';
+import 'package:zeiki/core/auth/biometric_service.dart';
+import 'package:zeiki/core/auth/google_sign_in_handler.dart';
 import 'package:zeiki/core/di/service_locator.dart';
 import 'package:zeiki/core/router/app_router.dart';
 import 'package:zeiki/main.dart';
@@ -52,8 +54,13 @@ void main() {
   setUp(() {
     fakeAuth = _FakeAuthService();
     getIt.registerSingleton<AuthService>(fakeAuth);
+    getIt.registerSingleton<BiometricService>(_FakeBiometricService());
+    getIt.registerSingleton<GoogleSignInHandler>(
+      const GoogleSignInHandler(),
+    );
     router = buildAppRouter(
       authServiceGetter: () => getIt<AuthService>(),
+      biometricServiceGetter: () => getIt<BiometricService>(),
     );
   });
 
@@ -96,6 +103,9 @@ class _FakeAuthService implements AuthService {
   sb.Session? getCurrentSession() => null;
 
   @override
+  String? get currentUserId => null;
+
+  @override
   Future<void> signOut() async {}
 
   @override
@@ -129,4 +139,20 @@ class _FakeAuthService implements AuthService {
       );
 
   // (hasGoogleHandler removido en cleanup HDU-005, ver auth_service.dart)
+}
+
+/// Fake de `BiometricService` para el integration test. Devuelve
+/// `false` por default — no interferimos con la lógica del redirect.
+class _FakeBiometricService implements BiometricService {
+  @override
+  Future<bool> isBiometricAvailable() async => false;
+
+  @override
+  Future<bool> authenticate(String reason) async => false;
+
+  @override
+  Future<bool> isBiometricEnabled({required String userId}) async => false;
+
+  @override
+  Future<void> setBiometricEnabled(bool enabled, {required String userId}) async {}
 }
