@@ -304,8 +304,7 @@ class _FakeAuthService implements AuthService {
   Stream<sb.AuthState> get authStateChanges =>
       const Stream<sb.AuthState>.empty();
 
-  @override
-  bool get hasGoogleHandler => googleHandler != null;
+  // (hasGoogleHandler removido en cleanup HDU-005, ver auth_service.dart)
 }
 
 sb.AuthResponse _makeAuthResponse() {

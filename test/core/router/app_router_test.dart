@@ -202,6 +202,5 @@ class _FakeAuthService implements AuthService {
         message: 'not used in app_router_test',
       );
 
-  @override
-  bool get hasGoogleHandler => false;
+  // (hasGoogleHandler removido en cleanup HDU-005, ver auth_service.dart)
 }

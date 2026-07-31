@@ -21,7 +21,6 @@
 // `getCurrentSession()` en cada navegación, que es suficiente. El
 // stream reactivo se conectará cuando alguna pantalla lo necesite
 // (probablemente HDU-005b o HDU-006).
-import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as sb;
 
 import 'auth_exception.dart';
@@ -178,12 +177,6 @@ class AuthService {
   /// Stream de cambios de auth. Se expone para uso futuro (HDU-005b /
   /// HDU-006). Hoy nadie lo consume.
   Stream<sb.AuthState> get authStateChanges => _authStateChangeFn();
-
-  // Marca el constructor como testeable: el `@visibleForTesting` se
-  // usa en la doc de la API de Google. Aquí solo documenta la
-  // intención de los parámetros inyectables.
-  @visibleForTesting
-  bool get hasGoogleHandler => _googleSignInHandler != null;
 }
 
 // ====================================================================
