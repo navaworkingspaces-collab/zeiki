@@ -20,6 +20,7 @@
 //
 // El `AuthService` toma el `idToken` y lo pasa a
 // `Supabase.auth.signInWithIdToken(provider: google, idToken: ...)`.
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:google_sign_in/google_sign_in.dart';
 
 import 'auth_exception.dart';
@@ -66,10 +67,24 @@ class GoogleSignInHandler {
   /// constructor para que `const GoogleSignInHandler()` siga siendo
   /// const cuando se use con `signInFn` inyectada.
   static Future<String?> _defaultSignIn() async {
+    // BUG-001 investigation: trazar qué devuelve el plugin real para
+    // confirmar/refutar la hipótesis "serverClientId falta" (idToken
+    // viene null aunque account != null). Output filtrable con
+    // `adb logcat | grep 'BUG-001'`. Se quita después de cerrar la BUG.
     final googleSignIn = GoogleSignIn();
+    debugPrint('[BUG-001] googleSignIn instance created. '
+        'serverClientId=${googleSignIn.clientId}, '
+        'scopes=${googleSignIn.scopes}');
     final account = await googleSignIn.signIn();
+    debugPrint('[BUG-001] signIn() returned: '
+        'account=${account == null ? "null" : "non-null"}, '
+        'email=${account?.email}');
     if (account == null) return null;
     final auth = await account.authentication;
+    debugPrint('[BUG-001] account.authentication: '
+        'idToken=${auth.idToken == null ? "null" : "non-null(${auth.idToken!.length} chars)"}, '
+        'accessToken=${auth.accessToken == null ? "null" : "non-null(${auth.accessToken!.length} chars)"}, '
+        'serverAuthCode=${account.serverAuthCode == null ? "null" : "non-null"}');
     return auth.idToken;
   }
 }
