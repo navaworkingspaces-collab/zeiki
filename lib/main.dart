@@ -23,7 +23,14 @@
 //   2. **InactivityMonitor:** envuelve `MaterialApp` y dispara
 //      `signOut` después de 5 minutos sin interacción. El timer
 //      sigue corriendo en background (matchea bancos).
+// HDU-006: el `BlocProvider<SplashCubit>` envuelve la app para que la
+//   ruta `/splash` pueda consumir el Cubit desde el contexto (patrón
+//   BLoC estándar). Se crea UNA sola instancia del Cubit en `runApp`
+//   para que el estado del splash sea continuo (no se reconstruye al
+//   re-renderizar la ruta). El `SplashScreen` consume el Cubit
+//   desde `context.read<SplashCubit>()` / `BlocListener`.
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:go_router/go_router.dart';
 
@@ -37,6 +44,7 @@ import 'core/router/app_links_handler.dart';
 import 'core/router/app_router.dart';
 import 'core/supabase/supabase_client.dart';
 import 'core/tiers/tier_service.dart';
+import 'features/identidad/blocs/splash_cubit.dart';
 
 Future<void> main() async {
   // Asegura el binding antes del await para no perder el primer frame.
@@ -112,11 +120,18 @@ Future<void> main() async {
   // El monitor detecta taps/scrolls y dispara `signOut` después de
   // 5 minutos sin interacción. El timer sigue corriendo en
   // background (matchea bancos).
+  //
+  // HDU-006: el `BlocProvider<SplashCubit>` se provee UNA sola vez
+  // aquí para que el Cubit viva toda la app (no se reconstruye al
+  // cambiar de ruta). El `SplashScreen` lo consume desde el contexto.
   runApp(
     InactivityMonitor(
       config: const AuthServiceConfig(),
       signOutFn: () => getIt<AuthService>().signOut(),
-      child: ZeikiApp(router: router),
+      child: BlocProvider<SplashCubit>(
+        create: (_) => SplashCubit(),
+        child: ZeikiApp(router: router),
+      ),
     ),
   );
 
