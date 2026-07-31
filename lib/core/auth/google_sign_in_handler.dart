@@ -97,12 +97,6 @@ class GoogleSignInHandler {
       scopes: const <String>['email', 'profile'],
       serverClientId: webClientId,
     );
-    // TEMPORAL: BUG-001 chooser verification. Hugo quiere confirmar
-    // que el chooser SÍ aparece con las 3 cuentas cuando Play Services
-    // no tiene cuenta recordada. `signOut()` limpia el cache local del
-    // plugin; el próximo `signIn()` debe mostrar el chooser. SE
-    // REMUEVE antes del merge (ver commit siguiente).
-    await googleSignIn.signOut();
     final account = await googleSignIn.signIn();
     if (account == null) return null;
     final auth = await account.authentication;
