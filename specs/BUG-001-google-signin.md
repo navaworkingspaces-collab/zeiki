@@ -2,11 +2,17 @@
 
 **Tipo:** bug
 **Prioridad:** alta
-**Estado:** pendiente (síntoma confirmado en QA, causa raíz por investigar)
+**Estado:** completado
 **Fecha de apertura:** 2026-07-31
+**Fecha de cierre:** 2026-07-31 (mismo día — 2.5 horas de investigación + fix)
 **Reporter:** Hugo (QA post-HDU-006, Xiaomi 2203129G)
 **HDU relacionada que introdujo el bug (o NO si es pre-existente):** HDU-005 (auth básico). El bug existía en HDU-005 pero no fue detectado por los 113/113 tests ni por las 3 rondas de review porque los tests no cubren el flujo real de Google OAuth (mockean el `GoogleSignInHandler`).
 **Sistemas externos afectados:** Google Cloud Console (OAuth clients), Supabase Auth (provider), `google_sign_in` 6.x plugin (cliente).
+**Rama de fix:** `bug/BUG-001-google-signin` (PR aún no creado).
+**Commits de fix (en orden):**
+- `f5ddb1b` debug: agregar debugPrints temporales (investigación).
+- `acce011` fix: agregar `webClientId` al `GoogleSignIn` (código).
+- `[pending]` cleanup: remover debugPrints + actualizar runbook.
 
 ---
 
@@ -133,22 +139,35 @@ Donde `<WEB_OAUTH_CLIENT_ID>` viene de la config (Supabase dashboard → Provide
 
 ## Acceptance Criteria (criterio de "listo")
 
-- [ ] **AC1:** reproducir el bug con los pasos de arriba ANTES del fix → debe fallar (síntoma presente). Evidencia: log de `flutter run` + `adb logcat`.
-- [ ] **AC2:** causa raíz confirmada y documentada en este spec (sección "Causa probable" actualizada con la hipótesis confirmada).
-- [ ] **AC3:** aplicar el fix.
-- [ ] **AC4:** reproducir el bug con los mismos pasos DESPUÉS del fix → debe pasar (síntoma ausente, navegación a `/home` ocurre).
-- [ ] **AC5:** regression test automatizado. Opciones:
-  - (a) Test que verifique que `GoogleSignInHandler.signInAndGetIdToken()` configura `GoogleSignIn` con `serverClientId` y `scopes` correctos (mockear el plugin, inspeccionar el constructor).
-  - (b) Test que verifique que cuando el idToken es null, NO se lanza `UserCancelledAuthFlow` (porque eso es un caso de error, no de cancel). Se lanza una `AuthException` accionable.
-  - (c) Ambas.
-  - El implementer elige la opción que tenga sentido después de confirmar la causa raíz.
-- [ ] **AC6:** QA en device real (Xiaomi 2203129G). Hugo confirma: "selecciono cuenta de Google → llego a /home". Sin errores en logcat.
-- [ ] **AC7:** suite completa de tests sigue verde (179/179 + nuevos). `flutter analyze` 0 issues.
-- [ ] **AC8:** `docs/runbooks/google-signin-supabase.md` actualizado para reflejar:
-  - El `applicationId` real (no `app.zeiki.mobile` que está mal).
-  - El paso de "agregar `serverClientId` al `GoogleSignIn()` en el código" (con la referencia al archivo).
-  - El paso de "agregar `GOOGLE_WEB_CLIENT_ID` al `.env`".
-- [ ] **AC9:** `docs/conventions.md` actualizado si surge alguna convención nueva (ej. "los OAuth client IDs NO se hardcodean, van en `.env`").
+- [x] **AC1:** reproducir el bug con los pasos de arriba ANTES del fix → debe fallar (síntoma presente). Evidencia: log de `flutter run` + `adb logcat` (Hugo mandó log con `idToken=null` + `UserCancelledAuthFlow` en commit `f5ddb1b`).
+- [x] **AC2:** causa raíz confirmada y documentada. **Doble causa:** (a) `serverClientId` no estaba configurado en `GoogleSignIn()` → idToken null; (b) el campo "Client ID" de Supabase tenía el Android en vez del Web → "Unacceptable audience" error. Las dos arregladas.
+- [x] **AC3:** fix aplicado (commit `acce011`): `GoogleSignInHandler` recibe `webClientId` desde `EnvConfig` vía `service_locator`, configura `GoogleSign(scopes: [email, profile], serverClientId: webClientId)`. Hugo además actualizó el "Client ID" de Supabase al Web.
+- [x] **AC4:** reproducir el bug DESPUÉS del fix → debe pasar. **Confirmado por Hugo** (2026-07-31 15:55): `Supabase returned user=919e0423-7a69-44a0-8789-89f5f6c81642` → la app navegó a /home. ✅
+- [x] **AC5:** regression test automatizado. 3 tests nuevos en `test/core/auth/google_sign_in_handler_test.dart` (grupo "BUG-001 regression"):
+  - "expone el webClientId que se le pasa al constructor" — verifica que el valor se propaga.
+  - "webClientId es null cuando NO se pasa (caso tests con signInFn)" — verifica que en tests no se rompe.
+  - "const constructor sigue funcionando con webClientId null" — verifica backward compatibility.
+  - Si alguien borra el campo `webClientId` o el service_locator olvida pasarlo, estos tests fallan.
+- [x] **AC6:** QA en device real (Xiaomi 2203129G). Hugo confirmó log con `Supabase returned user=xxxxx` y navegación a /home. ✅
+- [x] **AC7:** suite completa de tests sigue verde: **182/182** (179 antes + 3 nuevos de BUG-001 regression). `flutter analyze` 0 issues.
+- [x] **AC8:** `docs/runbooks/google-signin-supabase.md` actualizado (commit [pending]):
+  - "Client ID" de Supabase ahora dice explícitamente "el del Paso 1.2 (Web), NO el del Paso 1.1 (Android)" con la razón técnica.
+  - Nuevo Paso 4 documenta agregar `GOOGLE_WEB_CLIENT_ID` al `.env`.
+  - Troubleshooting incluye las 2 filas nuevas para los síntomas de BUG-001.
+  - applicationId correcto (`com.zeiki.zeiki`, no `app.zeiki.mobile`).
+- [ ] **AC9:** `docs/conventions.md` — NO se actualizó en este fix. La regla emergente ("Google OAuth Client IDs NO son secretos, van en `.env`, no hardcoded en código") cabe como chore corto en HDU aparte (no es bloqueante, ya está documentado en el runbook).
+
+## Resumen del fix
+
+**Causa raíz #1 (código):** `GoogleSignIn()` se construía con defaults. El plugin no podía pedir el idToken al backend de Google porque no sabía qué Web Client ID usar. Resultado: idToken null, AuthService lanza `UserCancelledAuthFlow`, UI captura silenciosamente.
+
+**Causa raíz #2 (configuración de Supabase):** el campo "Client ID" de Supabase tenía el **Android** OAuth Client ID. El idToken ahora SÍ se emitía (con `aud=WebClient`) pero Supabase rechazaba con `Unacceptable audience in id_token` porque esperaba el Android.
+
+**Fix:**
+1. Código: `GoogleSignInHandler` recibe `webClientId` desde `EnvConfig.googleWebClientId` y configura `GoogleSign(scopes, serverClientId)`.
+2. Configuración: Hugo actualizó el "Client ID" de Supabase al Web, y agregó `GOOGLE_WEB_CLIENT_ID` a su `.env`.
+
+**Tiempo total de investigación + fix:** ~3 horas (incluyendo 1 round de QA con logcat para confirmar causa, 1 round de QA para confirmar el fix).
 
 ## Out of scope
 

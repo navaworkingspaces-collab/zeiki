@@ -8,16 +8,22 @@
 > **Quién lo hace:** Hugo (configuración externa al repo).
 > Implementer documenta y referencia.
 >
-> **Status:** Pendiente de configurar para mergear HDU-005.
+> **Status:** Configurado y validado en BUG-001 (2026-07-31). El
+> campo "Client ID" de Supabase debe ser el **Web OAuth Client ID**
+> (no el Android) para que el `signInWithIdToken` valide el
+> `aud` del idToken correctamente.
 
 ## Resumen de lo que se hace
 
 Google Sign-In en Supabase requiere **tres configs externas**:
 
-1. **Google Cloud Console** — crear OAuth client (Android).
-2. **Firebase** — registrar el SHA-1 del cert de debug.
+1. **Google Cloud Console** — crear OAuth client (Android) + OAuth
+   client (Web).
+2. **Firebase** — registrar el SHA-1 del cert de debug (solo para
+   el cliente Android, no se necesita para Web).
 3. **Supabase dashboard** — activar Google como provider y pegar
-   las credenciales.
+   las credenciales. **OJO:** el campo "Client ID" debe ser el
+   **Web** OAuth Client ID (no el Android) — ver BUG-001.
 
 Sin las tres, el flujo no funciona.
 
@@ -84,11 +90,19 @@ necesita el SHA-1 del cert de release. Por ahora solo el de debug.
 3. Buscar **Google** en la lista y hacer click.
 4. Toggle **Enable Sign in with Google** a ON.
 5. Pegar:
-   - **Client ID (for OAuth flow):** el del Paso 1.1 (Android).
-   - **Client Secret:** el del OAuth client **Web** del Paso 1.2
-     (sí, Supabase pide el secret del Web client aunque la app
-     sea Android — el `signInWithIdToken` valida en el servidor).
-6. **Authorized Client IDs:** el Client ID del Paso 1.1 (Android).
+   - **Client ID (for OAuth flow):** ⚠️ **el del Paso 1.2 (Web)**, NO
+     el del Paso 1.1 (Android). Esto es porque el plugin
+     `google_sign_in` 6.x, cuando se le pasa `serverClientId=Web`,
+     pide el idToken al backend de Google y el `aud` claim del
+     idToken es el Web Client ID. Supabase valida ese `aud` contra
+     este campo. Si pones el Android Client ID aquí, Supabase
+     rechaza con `AuthApiException: Unacceptable audience in
+     id_token` (ver BUG-001).
+   - **Client Secret:** el del OAuth client **Web** del Paso 1.2.
+6. **Authorized Client IDs:** puedes poner tanto el Web como el
+   Android (comma-separated), o solo el Web. No afecta el flujo
+   del idToken; es solo la lista de clients que pueden usar este
+   provider.
 7. **Save**.
 
 ### Verificar
@@ -104,7 +118,24 @@ Si devuelve 400 → revisar el Client ID / Secret.
 
 ---
 
-## Paso 4 — Verificar en la app
+## Paso 4 — Configurar el Web OAuth Client ID en la app (BUG-001)
+
+**ESTE PASO ES OBLIGATORIO** (lo descubrió BUG-001). Sin esto, el
+plugin `google_sign_in` no puede pedir el idToken al backend de
+Google.
+
+1. Copia el **Web OAuth Client ID** del Paso 1.2 (formato
+   `xxxxx-yyyyy.apps.googleusercontent.com`).
+2. Abre `assets/.env` (el archivo real, gitignored). Si no existe,
+   copia `assets/.env.example` a `assets/.env` y rellena los
+   valores de Supabase.
+3. Agrega la línea:
+   ```
+   GOOGLE_WEB_CLIENT_ID=xxxxx-yyyyy.apps.googleusercontent.com
+   ```
+4. **NO commitees `assets/.env`** (ya está en `.gitignore`).
+
+## Paso 5 — Verificar en la app
 
 ```powershell
 flutter run
@@ -112,15 +143,26 @@ flutter run
 
 En el Xiaomi:
 1. Tocar "Continuar con Google" en register o login.
-2. Debe aparecer el popup del SO con la cuenta Google.
+2. Debe aparecer el popup del SO con la cuenta Google
+   (si tienes varias, sale el chooser; si tienes una sola, va
+   directo).
 3. Confirmar → debe navegar a /home.
+4. Si aparece el error `AuthApiException: Unacceptable audience in
+   id_token`, vuelve al Paso 3 y revisa que el campo "Client ID"
+   tenga el **Web** (no el Android).
 
 Si el popup no aparece o falla:
 - Revisar que el SHA-1 en Google Cloud Console coincida con el
   del cert de debug (Paso 2).
 - Revisar que el `applicationId` en `android/app/build.gradle`
-  coincida con el del OAuth client.
-- Revisar que el package name en Firebase/AndroidManifest coincida.
+  coincida con el del OAuth client Android. El applicationId
+  real de Zeiki es `com.zeiki.zeiki` (NO `app.zeiki.mobile` —
+  este nombre aparece en versiones antiguas del runbook y está
+  mal).
+- Revisar que el `GOOGLE_WEB_CLIENT_ID` esté en `assets/.env`
+  (Paso 4).
+- Capturar `adb logcat | grep -i 'google\|supabase\|flutter'`
+  durante la reproducción.
 
 ---
 
@@ -129,7 +171,8 @@ Si el popup no aparece o falla:
 | Síntoma | Causa probable | Fix |
 |---------|----------------|-----|
 | Popup no aparece | Falta SHA-1 en Google Cloud Console | Paso 2 |
-| Popup aparece, falla al confirmar | Client ID mal pegado en Supabase | Paso 3, verificar Client ID |
+| Popup aparece, seleccionar cuenta → no pasa nada (silencio) | Falta `GOOGLE_WEB_CLIENT_ID` en `.env` o el plugin no recibe `serverClientId` (BUG-001) | Paso 4 + verificar código `google_sign_in_handler.dart` |
+| Popup aparece, seleccionar cuenta → error `Unacceptable audience in id_token` | El campo "Client ID" de Supabase tiene el Android Client ID en vez del Web | Paso 3, cambiar el Client ID al **Web** |
 | `ApiException: 10` | `google-services.json` falta o está mal | (HDU futura: agregar Firebase) |
 | `PlatformException(sign_in_failed)` | SHA-1 no coincide | Regenerar SHA-1 con `signingReport` |
 | Pantalla blanca tras popup | Supabase devuelve 400 — secret inválido | Paso 3, verificar Client Secret |
@@ -142,6 +185,9 @@ Si el popup no aparece o falla:
 - [HDU-005 spec](../../specs/HDU-005-auth-basico.md) — flujo de auth
   completo (incluye la decisión de scope simplificado: ambos métodos
   en login, no auto-detección).
+- [BUG-001 spec](../../specs/BUG-001-google-signin.md) — el bug que
+  detectó que faltaba `serverClientId` y que el "Client ID" de
+  Supabase debe ser el Web.
 - [ADR-009](../adr/ADR-009-rewrite-with-knowledge-reuse.md) — la
   reescritura desde cero.
 - [secrets.md](./secrets.md) — gestión de secretos (rotación, .env).
