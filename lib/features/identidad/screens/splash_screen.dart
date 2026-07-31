@@ -30,7 +30,7 @@
 //   - Esto es la única decisión que el splash hace "por sí mismo":
 //     saltar la animación cuando el flag dice que no debe mostrarse.
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show rootBundle;
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
@@ -234,14 +234,32 @@ class _SplashViewState extends State<_SplashView>
 
   Future<void> _loadAppVersion() async {
     try {
-      final raw = await rootBundle.loadString('pubspec.yaml');
-      final version = _parseVersionFromPubspec(raw);
+      // `PackageInfo.fromPlatform().version` devuelve el `versionName`
+      // del AndroidManifest (X.Y.Z) / `CFBundleShortVersionString` del
+      // Info.plist (X.Y.Z). Lee del `pubspec.yaml` del proyecto en
+      // compile time — no del asset bundle, así que NO requiere que
+      // `pubspec.yaml` esté en `flutter.assets:`.
+      //
+      // **Por qué no leemos `pubspec.yaml` con `rootBundle.loadString`**
+      // (HDU-006 v1, bug del reviewer): ese archivo NO está en la
+      // sección `flutter.assets:` del manifest, así que el bundle de
+      // Flutter no lo incluye y la lectura revienta en producción. El
+      // `catch` lo enmascaraba y el footer salía como "v?".
+      //
+      // **Por qué no usamos `PlatformDispatcher.instance.applicationVersion`**
+      // (HDU-006 v2, sugerencia del reviewer que no aplica): ese getter
+      // NO existe en Flutter 3.38.3 (probado: undefined_getter al
+      // compilar). `package_info_plus` es la opción cross-platform
+      // correcta para esta versión de Flutter.
+      final info = await PackageInfo.fromPlatform();
+      final version = info.version;
       if (mounted) {
         setState(() => _appVersion = version);
       }
     } catch (_) {
-      // Si falla, dejamos `_appVersion` en null y el footer muestra
-      // "v?" como fallback. NO crasheamos el splash por esto.
+      // Si falla (ej. el PackageInfo no está listo en tests sin
+      // mock), dejamos `_appVersion` en null y el footer muestra "v?"
+      // como fallback. NO crasheamos el splash por esto.
     }
   }
 
@@ -439,21 +457,4 @@ class _SplashViewState extends State<_SplashView>
   }
 }
 
-/// Parsea la línea `version:` de un `pubspec.yaml`. Lanza
-/// `FormatException` si no la encuentra.
-///
-/// **Por qué no usamos `package_info_plus` (conventions §11):**
-/// agregar una dep solo para leer la versión local es desproporcionado.
-/// El formato `version: X.Y.Z+N` (o `version: X.Y.Z`) es estable y
-/// se parsea con una regex en 5 líneas.
-String _parseVersionFromPubspec(String pubspecContent) {
-  final match = RegExp(r'^version:\s*([0-9]+\.[0-9]+\.[0-9]+(?:\+\d+)?)\s*$',
-          multiLine: true)
-      .firstMatch(pubspecContent);
-  if (match == null) {
-    throw const FormatException(
-      'No se encontró la línea `version:` en pubspec.yaml',
-    );
-  }
-  return match.group(1)!;
-}
+

@@ -20,6 +20,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as sb;
 
 import 'package:zeiki/core/auth/auth_exception.dart';
@@ -42,6 +43,19 @@ void main() {
   late SplashCubit cubit;
 
   setUp(() {
+    // Mock del plugin `package_info_plus` (HDU-006 v2, fix del reviewer).
+    // Sin esto, `PackageInfo.fromPlatform()` lanza en tests porque el
+    // plugin real requiere el contexto de Android/iOS. Mockeamos con la
+    // versión real del pubspec (0.1.0) para que el test verifique el
+    // comportamiento end-to-end del footer.
+    PackageInfo.setMockInitialValues(
+      appName: 'zeiki',
+      packageName: 'com.zeiki.zeiki',
+      version: '0.1.0',
+      buildNumber: '1',
+      buildSignature: '',
+    );
+
     tier = _FakeTierService();
     auth = _FakeAuthService();
     biometric = _FakeBiometricService();
@@ -105,16 +119,29 @@ void main() {
         'Team" 14px', (tester) async {
       await pumpSplash(tester);
 
-      // La versión viene de pubspec.yaml. El test corre en el contexto
-      // del proyecto, así que la versión real (0.1.0+1) está en el
-      // asset bundle. Usamos `find.textContaining` para no atarnos al
-      // formato exacto.
+      // **Endurecido post-review HDU-006 v2:** antes el test solo buscaba
+      // "Developed by Zeiki Team", lo cual pasaba IGUAL con la versión
+      // rota ("v?"). Ahora verificamos:
+      //   1. Que NO existe "v?" (versión rota).
+      //   2. Que la versión mockeada (0.1.0) sí está en el footer.
+      // Si `PackageInfo.fromPlatform()` falla o el mock no se aplica, el
+      // footer mostraría "v?" y el test falla.
       expect(
-        find.textContaining('Developed by Zeiki Team'),
-        findsOneWidget,
+        find.textContaining('v?'),
+        findsNothing,
+        reason: 'Si la versión es "v?" significa que '
+            'PackageInfo.fromPlatform() falló. Revisar _loadAppVersion() '
+            'en splash_screen.dart.',
       );
 
-      final footerFinder = find.textContaining('Developed by Zeiki Team');
+      expect(
+        find.text('v0.1.0 · Developed by Zeiki Team'),
+        findsOneWidget,
+        reason: 'La versión debe venir del pubspec.yaml vía '
+            'package_info_plus (mock inicializado en setUp).',
+      );
+
+      final footerFinder = find.text('v0.1.0 · Developed by Zeiki Team');
       final textWidget = tester.widget<Text>(footerFinder);
       expect(textWidget.style?.fontSize, 14);
     });

@@ -27,6 +27,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as sb;
 
 import 'package:zeiki/core/auth/auth_exception.dart';
@@ -54,6 +55,19 @@ void main() {
     if (getIt.isRegistered<GoRouter>()) {
       await getIt.unregister<GoRouter>();
     }
+
+    // Mock del plugin `package_info_plus` (HDU-006 v2, fix del reviewer).
+    // Sin esto, `PackageInfo.fromPlatform()` lanza en tests unitarios
+    // porque el plugin real requiere el contexto de Android/iOS. Mockeamos
+    // con la versión real del pubspec (0.1.0) para que el footer del
+    // splash pueda renderearse.
+    PackageInfo.setMockInitialValues(
+      appName: 'zeiki',
+      packageName: 'com.zeiki.zeiki',
+      version: '0.1.0',
+      buildNumber: '1',
+      buildSignature: '',
+    );
 
     fakeAuth = _FakeAuthService();
     tier = _FakeTierService();
