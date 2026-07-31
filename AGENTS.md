@@ -2,7 +2,7 @@
 
 > **Bootstrap de sesión.** Mavis (o cualquier agente) lee este archivo **PRIMERO** al abrir una sesión en este proyecto. Sin leer el resto del repo, este archivo da el contexto mínimo para no perderse.
 >
-> **Última actualización:** 2026-07-31 (post-HDU-006 cerrada, HDU-007 abierta)
+> **Última actualización:** 2026-07-31 (post-HDU-006 cerrada, BUG-001 abierta)
 
 ---
 
@@ -10,7 +10,7 @@
 
 - **Nombre:** Zeiki (con Z). **Cero "Seiki"** — el proyecto legacy es `seiki_app`, no se mezclan.
 - **Qué es:** App móvil (Flutter) para facturación CFDI 4.0 en México. Reescritura desde cero.
-- **Estado:** Fase 1 — MVP. **Código base + backend Supabase + feature flag system del cliente + navegación con go_router + auth básico (email + Google, ⚠️ Google Sign-In con bug — ver HDU-007) + biometría + timer de inactividad + splash nuevo con branding** listos (HDU-001, HDU-002, HDU-003, HDU-004, HDU-005, HDU-005b, HDU-006 cerradas).
+- **Estado:** Fase 1 — MVP. **Código base + backend Supabase + feature flag system del cliente + navegación con go_router + auth básico (email + Google, ⚠️ Google Sign-In con bug — ver BUG-001) + biometría + timer de inactividad + splash nuevo con branding** listos (HDU-001, HDU-002, HDU-003, HDU-004, HDU-005, HDU-005b, HDU-006 cerradas).
 - **Stack:** Flutter 3.38.3 + Supabase (Postgres + Auth + Edge Functions) + Deno para edge functions. Detalle en `target-architecture.md`.
 - **Sin clientes en producción** → no hay riesgo de "valle" en la reescritura.
 
@@ -38,23 +38,22 @@ Después de leer esos 5:
 
 ## Lo que NO existe (a propósito)
 
-- **HDU-007 abierta** (única activa): bug Google Sign-In no completa el flujo. Spec pendiente, síntoma confirmado en QA post-HDU-006. Ver `.mavis/hdu.md` para detalle.
+- **BUG-001 abierta** (única activa): bug Google Sign-In no completa el flujo. Spec en `specs/BUG-001-google-signin.md`. Ver `.mavis/hdu.md` para detalle.
 - **No hay agente `zeiki-pipeline-runner` todavía** (workflow §8 lo referencia). Se crea cuando se configure CI.
-- **No hay plantilla `hdu-bug` todavía** — HDU-007 será la primera en usarla, sale en este cleanup.
 
 ---
 
 ## Lo que existe (lo que sí está)
 
 - **Código del cliente:** Flutter app con `SplashScreen` real (HDU-006) detrás de feature flag, login screen (HDU-005), home screen, biometría (HDU-005b), 6 carpetas en `lib/core/` (auth, di, logging, constants, services, tiers), 6 carpetas en `lib/features/` (identidad, fiscal, clientes, reportes, asistencia, configuracion), 8 dependencias declaradas (HDU-006 agregó `package_info_plus`), 179/179 unit tests verde, integration tests.
-- **Backend Supabase:** proyecto `iocbqjzmoneulydmeavr` (región `us-east-2`). Tabla `app_tier_features` con RLS + seed + GRANTs. Edge function `feature-flags` deployada (devuelve los flags en JSON). Cliente Dart inicializado en `main.dart`. **Google provider habilitado** con Client IDs (Android+Web) y Client Secret (Web) — pero el flujo cliente está roto (ver HDU-007).
+- **Backend Supabase:** proyecto `iocbqjzmoneulydmeavr` (región `us-east-2`). Tabla `app_tier_features` con RLS + seed + GRANTs. Edge function `feature-flags` deployada (devuelve los flags en JSON). Cliente Dart inicializado en `main.dart`. **Google provider habilitado** con Client IDs (Android+Web) y Client Secret (Web) — pero el flujo cliente está roto (ver BUG-001).
 - **Runbooks:** `docs/runbooks/secrets.md` (gestión de secretos), `docs/runbooks/google-signin-supabase.md` (configuración OAuth), `docs/runbooks/splash-feature-flag.md` (activación del flag de splash en Supabase).
 - **Reportes de investigación:** `docs/research/HDU-EXPLORE-001-splash-legacy-report.md`.
 - **Reportes de review:** `docs/reviews/HDU-006-review.md` + v2 + v3 (3 rondas).
 - **Tracking de HDUs:** `.mavis/hdu.md` (local, en `.gitignore`).
 - **Snapshot del estado:** `docs/current-state.md` (commiteado, en repo).
 - **Agentes del orquestador:** `zeiki-implementer`, `zeiki-auditor`, `zeiki-reviewer` en `C:\Users\Pc\.minimax\agents\`.
-- **Documentación completa:** Target Architecture, Conventions, Workflow, Git, 12 ADRs (ADR-010 deprecated, movido a `deprecated/`; ADR-011 sobre `TierService` en GetIt; ADR-012 documenta la excepción arquitectónica del router), 2 plantillas (HDU-EXPLORE + la nueva HDU-BUG que sale en este cleanup).
+- **Documentación completa:** Target Architecture, Conventions, Workflow, Git, 12 ADRs (ADR-010 deprecated, movido a `deprecated/`; ADR-011 sobre `TierService` en GetIt; ADR-012 documenta la excepción arquitectónica del router), 2 plantillas (`docs/templates/hdu-explore.md` + `docs/templates/bug.md` para BUG-XXX).
 - **Repositorio legacy** `navaworkingspaces-collab/seiki_app` en **read-only indefinido** como respaldo histórico.
   - **Para qué sirve:** consultar algoritmos validados, integraciones probadas, reglas de negocio aprendidas.
   - **Qué NO se hace:** no se commitea ahí, no se reabren HDUs cerradas, no se traen tareas como activas.

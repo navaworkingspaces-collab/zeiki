@@ -2,7 +2,7 @@
 
 > **Snapshot rápido del estado del proyecto.** Se actualiza en el cleanup (paso 12) de cada HDU cerrada. Para el detalle de una HDU específica, ver `specs/HDU-XXX-*.md`. Para el histórico, ver `.mavis/hdu.md`.
 
-**Última actualización:** 2026-07-31 (post-HDU-006 cerrada, HDU-007 abierta).
+**Última actualización:** 2026-07-31 (post-HDU-006 cerrada, BUG-001 abierta).
 
 ---
 
@@ -10,7 +10,7 @@
 
 - **Fase:** 1 (MVP).
 - **Última HDU cerrada:** HDU-006 — Splash nuevo con branding + feature flag.
-- **HDUs activas:** HDU-007 (bug Google Sign-In — spec pendiente, síntoma confirmado en QA).
+- **HDUs activas:** BUG-001 (Google Sign-In no completa el flujo — spec en `specs/BUG-001-google-signin.md`, síntoma confirmado en QA).
 - **Rama `main`:** deployable.
 - **Stack operativo:** Flutter 3.38.3 + Supabase (proyecto Zeiki, región `us-east-2`) + Deno para edge functions.
 - **Proyecto Supabase:** ref `iocbqjzmoneulydmeavr`, URL `https://iocbqjzmoneulydmeavr.supabase.co`. Config en `assets/.env` (en `.gitignore`).
@@ -110,12 +110,12 @@
   - **Fail-safe "ON":** si el cache del `TierService` está frío (primera instalación, red caída), mostrar el splash por default. Solo se salta si el flag explícitamente está OFF en Supabase.
   - **Versión dinámica:** `package_info_plus` lee del `pubspec.yaml` cross-platform, sin riesgo de que el archivo no esté bundleado.
 - **QA local en Xiaomi (Hugo):** cold start con app cerrada (force-stop) → splash aparece completo con footer `v0.1.0 · Developed by Zeiki Team` → después de ~3s fade-out → redirect → /login. Cierre + reapertura de la app → splash reaparece (cache cold, fail-safe ON).
-- **Bug encontrado en QA post-merge (HDU-007):** Google Sign-In no completa el flujo. El selector de cuenta SÍ aparece, pero después de seleccionar una cuenta no pasa nada. NO fue detectado por los 113/113 tests de HDU-005 ni por las 3 rondas de review. Lección guardada en memoria #8.
+- **Bug encontrado en QA post-merge (BUG-001):** Google Sign-In no completa el flujo. El selector de cuenta SÍ aparece, pero después de seleccionar una cuenta no pasa nada. NO fue detectado por los 113/113 tests de HDU-005 ni por las 3 rondas de review. Lección guardada en memoria #8.
 - **5 follow-ups no bloqueantes** (registrados por el reviewer v3): redundancia de tests, nit de naming, mismatch fake vs real en `isCacheLoaded`, edge case de operador olvidando seedear flag, `debugEnabled` no activa fail-safe.
 
 ## 🔜 Próximos pasos sugeridos (secuencia decidida con Hugo)
 
-- **HDU-007 (PRIORIDAD ALTA):** Bug Google Sign-In no completa el flujo. Es el primer HDU tipo bug del proyecto. Spec pendiente (síntoma confirmado, causa raíz por investigar). Sistemas externos: Google Cloud Console (OAuth clients), Supabase dashboard (Auth providers), `google_sign_in` 6.x plugin. Plan: investigar `google_sign_in_handler.dart` + `auth_service.dart` + logs de Supabase + verificar config en Google Cloud Console (SHA-1, redirect URI, scopes) + reproducir con `flutter run` + capturar `adb logcat` + fix + regression test + QA en device real.
+- **BUG-001 (PRIORIDAD ALTA):** Google Sign-In no completa el flujo. Es la **primera BUG del proyecto** (namespace BUG-XXX separado de HDU-XXX). Spec en [`specs/BUG-001-google-signin.md`](../specs/BUG-001-google-signin.md). Síntoma confirmado, causa probable: `serverClientId` no configurado en `GoogleSignIn()` (el `idToken` vuelve null → el `AuthService` lanza `UserCancelledAuthFlow` → la UI lo captura silenciosamente). Sistemas externos: Google Cloud Console (OAuth clients), Supabase dashboard (Auth providers), `google_sign_in` 6.x plugin. Plan: confirmar causa con `debugPrint` + `adb logcat`, aplicar fix (agregar `serverClientId` y `scopes`), regression test, QA en Xiaomi, actualizar runbook.
 
 ## 🐛 Follow-ups activos (de HDUs cerradas)
 
@@ -142,7 +142,7 @@
 | 19 | HDU-004 | Regla "push para detail/sheet, go para tab/sección" — documentar como patrón canónico cuando haya más navegación. | baja | pendiente (HDU futura) |
 | 20 | HDU-004 | `android:label="zeiki"` en minúsculas (debería ser "Zeiki" con Z mayúscula). Pre-existente a HDU-001. | baja | chore (HDU corta de branding) |
 | 21 | HDU-004 | Renombrar test de "rotación" a "router conserva ruta tras rebuild" — el nombre actual es engañoso. | baja | chore (HDU corta) |
-| 22 | **HDU-005** | **BUG:** Google Sign-In no completa el flujo — selector de cuenta aparece, seleccionar cuenta → no pasa nada. Detectado en QA post-HDU-006 (no en test). 113/113 tests + 3 rondas de review no lo cacharon. | **alta** | **HDU-007 abierta (tipo bug)** |
+| 22 | **HDU-005** | **BUG:** Google Sign-In no completa el flujo — selector de cuenta aparece, seleccionar cuenta → no pasa nada. Detectado en QA post-HDU-006 (no en test). 113/113 tests + 3 rondas de review no lo cacharon. | **alta** | **BUG-001 abierta (primer BUG del proyecto)** |
 | 23 | HDU-006 | Redundancia entre grupos "cache cold" y "feature flag OFF" en `splash_screen_test.dart`. | baja | pendiente (HDU corta de test cleanup) |
 | 24 | HDU-006 | Nit de naming en el grupo "cache cold" (un test no es realmente cold porque setea un flag). | baja | pendiente (chore) |
 | 25 | HDU-006 | Fake `_FakeTierService.isCacheLoaded()` retorna `flags.isNotEmpty`; el real retorna `_cache.isNotEmpty \|\| _config.debugEnabled`. Mismatch pequeño. | baja | pendiente (chore) |

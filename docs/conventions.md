@@ -83,9 +83,11 @@ Un juicio subjetivo en cada PR.
 | Carpetas | `snake_case`, en inglés (con excepción para `lib/features/`, ver nota abajo) | `auth/`, `sat_configuration/`, `lib/features/identidad/` |
 | Archivos de código | `snake_case.<ext>` | `login_page.dart`, `auth_service.ts` |
 | Archivos de test | `<archivo>_test.<ext>` | `auth_bloc_test.dart` |
-| Specs | `HDU-XXX-slug-descriptivo.md` | `HDU-005-onboarding-flag.md` |
+| Specs HDU (features / explore / chore) | `HDU-XXX-slug-descriptivo.md` (o `HDU-EXPLORE-XXX-slug.md` para explore) | `HDU-005-onboarding-flag.md`, `HDU-EXPLORE-001-splash-legacy.md` |
+| Specs BUG (bug fixes) | `BUG-XXX-slug.md` (namespace separado, ver nota abajo) | `BUG-001-google-signin.md` |
 | Handoffs | `docs/handoffs/YYYY-MM-DD-hdu-XXX-slug.md` | `docs/handoffs/2026-07-27-hdu-021c.md` |
 | Docs de features | `docs/features/<nombre-feature>.md` | `docs/features/sat-download.md` |
+| Templates de spec | `docs/templates/<tipo>.md` | `docs/templates/hdu-explore.md`, `docs/templates/bug.md` |
 
 | Tipo | Convención | Ejemplo |
 |------|-----------|--------|
@@ -108,6 +110,24 @@ Un juicio subjetivo en cada PR.
 Las carpetas bajo `lib/features/<dominio>/` van en **español** (no en `snake_case` inglés): `identidad/`, `fiscal/`, `clientes/`, `reportes/`, `asistencia/`, `configuracion/`. Esto sigue la decisión arquitectónica de `target-architecture.md §6` y `ADR-008`. Si un día los nombres de dominio en Target cambian, se actualizan también aquí.
 
 El resto del proyecto (carpetas de `lib/core/`, `test/`, `supabase/`, `assets/`, `docs/`, etc.) sigue `snake_case` en inglés.
+
+**Namespaces de HDUs (HDU-XXX vs BUG-XXX vs HDU-EXPLORE-XXX):**
+
+Zeiki usa **tres namespaces independientes** para sus unidades de trabajo. Los contadores NO se mezclan:
+
+- **`HDU-XXX`** — features, chores y cualquier trabajo "productivo" (HDU-001 base, HDU-002 Supabase, HDU-005 auth, etc.).
+- **`HDU-EXPLORE-XXX`** — research sobre sistemas externos (pre-requisito de una HDU de implementación). Comparte numeración con HDU-XXX (es un tipo de HDU).
+- **`BUG-XXX`** — bug fixes. Contador **separado** de HDU-XXX. Empezó en BUG-001 con el primer bug del proyecto (Google Sign-In, post-HDU-006). Rationale: los bugs tienen lifecycle diferente (típicamente cortos, enfocados, urgentes) y queríamos un contador dedicado para tener visibilidad de "cuántos bugs tenemos abiertos" sin contaminar el contador de features.
+
+**Reglas operativas:**
+
+- Si durante una HDU se descubre un bug: **NO se mete como chore en la HDU**. Se abre un BUG aparte.
+  - Si el bug es **bloqueante** para el merge de la HDU → se aborta la HDU, se trata el BUG primero, después se retoma la HDU.
+  - Si el bug **NO es bloqueante** → se mergea la HDU y se abre el BUG aparte.
+- Una BUG es siempre de **un síntoma**. Si la investigación descubre que el mismo síntoma tiene N causas, todas se arreglan en la misma BUG. Si descubre N síntomas distintos, se abren N BUGs.
+- El plan de investigación es OBLIGATORIO antes de empezar a codear el fix (ver `docs/templates/bug.md`).
+- El regression test automatizado es OBLIGATORIO. Un fix sin regression test puede regresar en cualquier PR futuro.
+- El QA en device real es OBLIGATORIO para BUGs de OAuth / push / deep links / biometría nativa / pagos. Por la regla memoria #8 ("tests verde NO es app funcionando").
 
 ---
 
