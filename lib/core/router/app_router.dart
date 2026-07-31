@@ -1,4 +1,6 @@
-// Router declarativo de Zeiki (HDU-004 base, HDU-005 extiende).
+// Router declarativo de Zeiki (HDU-004 base, HDU-005 extiende, HDU-005b
+// biometría + unlock).
+import 'dart:async';
 //
 // Cambios de HDU-005:
 //   - **Decisión A (review de HDU-004):** `appRouter` deja de ser una
@@ -14,10 +16,24 @@
 //   - **Nueva ruta `/register` (AC4):** la pantalla de register vive
 //     en `lib/features/identidad/screens/register_screen.dart`.
 //
-// Las 4 rutas originales de HDU-004 (`/splash`, `/onboarding`,
-// `/login`, `/home`) SE MANTIENEN (AC35). Se renombran pantallas
-// (login/home ahora son reales, no placeholders), pero los paths
-// no cambian.
+// Cambios de HDU-005b (esta HDU):
+//   - **Nueva ruta `/unlock` (AC15):** la pantalla
+//     `UnlockScreen` se muestra cuando el cold start tiene sesión
+//     persistida Y `biometricEnabled` para ese userId. Pide huella
+//     antes de dejar pasar al usuario a /home.
+//   - **`refreshStream` finalmente se conecta (AC22-24):** el
+//     `GoRouterRefreshStream` que HDU-005 dejó construido se conecta
+//     al `authStateChanges` del `AuthService`. Resultado: `signOut`
+//     desde cualquier pantalla hace que el router re-evalúe el
+//     `redirect` automáticamente (sin tocar la pantalla).
+//
+// **Por qué el redirect NO consulta biometricEnabled:** el redirect
+// aplica a CADA navegación, no solo al cold start. Si el user está
+// en /home, hace logout, y va a /login, el redirect NO debe
+// re-mandarlo a /unlock (eso causaría un loop). La decisión de
+// "mostrar /unlock en el cold start" se toma UNA vez al construir
+// el router (en `service_locator.dart`); después, el UnlockScreen
+// mismo decide a dónde ir (éxito → /home, fallo 3x → /login).
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -25,18 +41,21 @@ import '../auth/auth_service.dart';
 import '../../features/identidad/screens/home_screen.dart';
 import '../../features/identidad/screens/login_screen.dart';
 import '../../features/identidad/screens/register_screen.dart';
+import '../../features/identidad/screens/unlock_screen.dart';
 import 'screens/onboarding_placeholder.dart';
 import 'screens/splash_placeholder.dart';
 
 /// Rutas declaradas por el router. El `.path` es lo que se usa en
 /// `context.go(...)` y en `findMatch(route: ...)`.
 ///
-/// HDU-005 agregó `register`. Los otros 4 vienen de HDU-004 (AC1).
+/// **HDU-005** agregó `register`. **HDU-005b** agrega `unlock` para el
+/// cold start con sesión + biometría habilitada.
 enum AppRoute {
   splash('/splash'),
   onboarding('/onboarding'),
   login('/login'),
   register('/register'),
+  unlock('/unlock'),
   home('/home');
 
   const AppRoute(this.path);
@@ -48,15 +67,17 @@ enum AppRoute {
 /// sin montar un widget tree (conventions §3: unit test cuando el
 /// comportamiento es puro).
 ///
-/// Reglas (AC24):
+/// **Reglas (AC24, HDU-005b):**
 ///   - `/splash`, `/onboarding` → nunca redirigen (públicas).
 ///   - `/login`, `/register`    → redirigen a `/home` si hay sesión.
-///   - Cualquier otra ruta     → redirigen a `/login` si NO hay sesión.
+///   - `/unlock`                → terminal; el `UnlockScreen`
+///                                decide internamente.
+///   - Rutas privadas (`/home` y futuras) sin sesión → `/login`.
 ///
 /// **No hay loops infinitos:** el `redirect` de `go_router` deja de
 /// llamar a la función cuando el resultado es `null`. Las reglas
-/// anteriores garantizan que `/login` sin sesión y `/home` con sesión
-/// son terminales (devuelven `null`).
+/// anteriores garantizan que `/login` sin sesión, `/home` con sesión,
+/// y `/unlock` siempre son terminales.
 String? computeAuthRedirect({
   required String goingTo,
   required bool isLoggedIn,
@@ -68,30 +89,43 @@ String? computeAuthRedirect({
   if (goingTo == AppRoute.login.path || goingTo == AppRoute.register.path) {
     return isLoggedIn ? AppRoute.home.path : null;
   }
-  return isLoggedIn ? null : AppRoute.login.path;
+  if (goingTo == AppRoute.unlock.path) {
+    // El UnlockScreen decide internamente; no redirigimos.
+    return null;
+  }
+  // Rutas privadas (incluyendo /home y futuras como /fiscal).
+  if (!isLoggedIn) {
+    return AppRoute.login.path;
+  }
+  return null;
 }
 
 /// Construye el `GoRouter` de Zeiki. Se llama desde
-/// `service_locator.dart` (registro lazy) o desde los tests con un
-/// `AuthService` fake.
+/// `service_locator.dart` (registro lazy) o desde los tests con
+/// `AuthService` y `BiometricService` fakes.
 ///
-/// `authServiceGetter` es una **función** que devuelve el `AuthService`
-/// actual. El redirect la llama en cada navegación para leer la
-/// sesión. Esto permite que los tests reemplacen el `AuthService` en
-/// `getIt` sin tener que reconstruir el router (conventions §3:
-/// "los tests son más simples si el SUT se acopla al lookup, no a
-/// la instancia fija").
+/// `authServiceGetter` es una **función** que devuelve el
+/// `AuthService` actual. El redirect la llama en cada navegación para
+/// leer la sesión. Esto permite que los tests reemplacen el
+/// `AuthService` en `getIt` sin tener que reconstruir el router
+/// (conventions §3).
 ///
-/// `refreshStream` se puede pasar en tests para forzar un re-redirect
-/// (ej. cuando cambia la sesión y queremos que el router reaccione
-/// sin esperar la próxima navegación). Por default es null — el
-/// redirect corre en cada navegación, que es suficiente para MVP.
+/// `refreshStream` se conecta al `authStateChanges` para que el
+/// router re-evalúe el `redirect` cuando el user hace signOut (sin
+/// esperar la próxima navegación). Por default es null — el redirect
+/// corre en cada navegación, que es suficiente para MVP (HDU-005b
+/// ya lo conecta en `service_locator.dart`).
+///
+/// `initialLocation` permite que `service_locator.dart` elija `/unlock`
+/// como punto de partida en el cold start cuando hay sesión +
+/// biometría habilitada. Default: `/splash`.
 GoRouter buildAppRouter({
   required AuthService Function() authServiceGetter,
   Stream<void>? refreshStream,
+  String initialLocation = '/splash',
 }) {
   return GoRouter(
-    initialLocation: AppRoute.splash.path,
+    initialLocation: initialLocation,
     routes: <RouteBase>[
       GoRoute(
         path: AppRoute.splash.path,
@@ -114,15 +148,17 @@ GoRouter buildAppRouter({
             const RegisterScreen(),
       ),
       GoRoute(
+        path: AppRoute.unlock.path,
+        builder: (BuildContext context, GoRouterState state) =>
+            const UnlockScreen(),
+      ),
+      GoRoute(
         path: AppRoute.home.path,
         builder: (BuildContext context, GoRouterState state) =>
             const HomeScreen(),
       ),
     ],
     redirect: (BuildContext context, GoRouterState state) {
-      // El getter resuelve el AuthService en cada navegación. Esto
-      // permite que el router reaccione a sign-in / sign-out sin
-      // necesidad de un refreshListenable.
       final session = authServiceGetter().getCurrentSession();
       return computeAuthRedirect(
         goingTo: state.matchedLocation,
@@ -146,9 +182,8 @@ GoRouter buildAppRouter({
 ///
 /// **Por qué existe:** `go_router.refreshListenable` espera un
 /// `Listenable`. Sin este adapter, no podríamos conectar un stream de
-/// cambios de sesión al router (lo cual será necesario en HDU-005b
-/// cuando se agregue biometría y auto-logout). Hoy se deja
-/// disponible aunque `refreshStream` sea null por default.
+/// cambios de sesión al router. **HDU-005b** lo conecta por fin al
+/// `authStateChanges` del `AuthService` (AC22).
 class GoRouterRefreshStream extends ChangeNotifier {
   GoRouterRefreshStream(Stream<void> stream) {
     notifyListeners();
@@ -157,7 +192,7 @@ class GoRouterRefreshStream extends ChangeNotifier {
         );
   }
 
-  late final dynamic _subscription;
+  late final StreamSubscription<void> _subscription;
 
   @override
   void dispose() {

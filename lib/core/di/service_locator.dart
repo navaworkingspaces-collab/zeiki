@@ -6,7 +6,7 @@
 //
 // Patrón:
 //   - Singleton lazy para servicios cross-cutting (`TierService`,
-//     `AuthService`, `GoRouter`).
+//     `AuthService`, `BiometricService`, `GoRouter`).
 //   - Los features NO reciben dependencias por constructor — las
 //     consumen vía `getIt<T>()` cuando las necesitan.
 //
@@ -19,6 +19,7 @@ import 'package:get_it/get_it.dart';
 import 'package:go_router/go_router.dart';
 
 import '../auth/auth_service.dart';
+import '../services/biometric_service.dart';
 import '../auth/google_sign_in_handler.dart';
 import '../router/app_router.dart';
 import '../tiers/tier_service.dart';
@@ -63,25 +64,52 @@ void setupServiceLocator() {
     );
   }
 
+  // `BiometricService` (HDU-005b, AC2): singleton lazy. Usa
+  // `local_auth` y `flutter_secure_storage` por default. Los tests
+  // inyectan fakes (funciones y un `_MemoryStorage`).
+  if (!getIt.isRegistered<BiometricService>()) {
+    getIt.registerLazySingleton<BiometricService>(BiometricService.new);
+  }
+
+  // `InactivityMonitor` (HDU-005b, AC20): NO se registra como
+  // singleton lazy. Es un widget — se instancia cuando
+  // `MaterialApp` lo monta (en `main.dart`, dentro del `runApp`).
+  // El widget recibe `signOutFn` por constructor (closure) que
+  // captura `getIt<AuthService>()`, no necesita estar en GetIt.
+
   // `GoRouter` (HDU-005, AC23 — Decisión A del review de HDU-004):
   // se registra como singleton lazy. La razón: el `redirect` del
   // router consulta `AuthService` antes de cada navegación, y el
   // `redirect` no puede usar un import circular ni una variable
   // global mutable. Con el router en GetIt, `buildAppRouter(authService:
   // getIt<AuthService>())` resuelve la dependencia limpiamente.
-  // El orden importa: `AuthService` debe estar registrado ANTES de
-  // `GoRouter` (GoRouter lo lee en su factory). Como `setupServiceLocator`
-  // es síncrono y los singletons son lazy, registrar GoRouter antes
-  // también funcionaría — la factory solo se evalúa en el primer
-  // `getIt<GoRouter>()`. Pero por claridad, registramos en orden de
-  // dependencia.
+  //
+  // **HDU-005b (AC22-24):** conectamos `authStateChanges` al
+  // `GoRouter.refreshListenable` vía `refreshStream`. Resultado:
+  // `signOut` desde cualquier pantalla hace que el router
+  // re-evalúe el `redirect` automáticamente (sin tocar la pantalla).
+  //
+  // **HDU-005b (AC10, AC15, AC16):** el `initialLocation` default
+  // es `/splash`. Si el cold start tiene sesión + biometría,
+  // `main.dart` lo override con `router.go('/unlock')` antes de
+  // `runApp`. Trade-off: el usuario ve un flash del splash antes
+  // de ir a /unlock. En la práctica, el frame del splash + el
+  // redirect son imperceptibles (no es un round-trip a la red).
+  // La alternativa (pre-cargar el cache de BiometricService de
+  // forma asíncrona antes de construir el router) requiere una
+  // API más complicada (separar el registro del router del
+  // service_locator) y se documenta como follow-up si la UX lo
+  // exige.
   if (!getIt.isRegistered<GoRouter>()) {
     getIt.registerLazySingleton<GoRouter>(
-      // El router recibe un GETTER, no un valor, para que el redirect
-      // consulte el AuthService actual en cada navegación. Esto permite
+      // El router recibe GETTERS, no instancias, para que el redirect
+      // consulte los servicios actuales en cada navegación. Esto permite
       // que `signIn*` y `signOut` (que mutan la sesión) se reflejen en
       // el router sin tener que reconstruirlo.
-      () => buildAppRouter(authServiceGetter: () => getIt<AuthService>()),
+      () => buildAppRouter(
+        authServiceGetter: () => getIt<AuthService>(),
+        refreshStream: getIt<AuthService>().authStateChanges,
+      ),
     );
   }
 }

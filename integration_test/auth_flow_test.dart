@@ -31,6 +31,7 @@ import 'package:integration_test/integration_test.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as sb;
 
 import 'package:zeiki/core/auth/auth_service.dart';
+import 'package:zeiki/core/services/biometric_service.dart';
 import 'package:zeiki/core/di/service_locator.dart';
 import 'package:zeiki/core/router/app_router.dart';
 import 'package:zeiki/main.dart';
@@ -47,12 +48,18 @@ void main() {
     if (!getIt.isRegistered<AuthService>()) {
       getIt.registerSingleton<AuthService>(_NullAuthServiceForTest());
     }
+    if (!getIt.isRegistered<BiometricService>()) {
+      getIt.registerSingleton<BiometricService>(_NullBiometricServiceForTest());
+    }
   });
 
   tearDownAll(() {
     // Limpia el singleton para no contaminar otras suites.
     if (getIt.isRegistered<AuthService>()) {
       getIt.unregister<AuthService>();
+    }
+    if (getIt.isRegistered<BiometricService>()) {
+      getIt.unregister<BiometricService>();
     }
   });
 
@@ -62,6 +69,7 @@ void main() {
       // El getter resuelve el AuthService desde GetIt (registrado en
       // setUpAll). El fake devuelve `null` → redirect a /login.
       authServiceGetter: () => getIt<AuthService>(),
+
     );
     addTearDown(router.dispose);
 
@@ -79,6 +87,7 @@ void main() {
       (WidgetTester tester) async {
     final router = buildAppRouter(
       authServiceGetter: () => getIt<AuthService>(),
+
     );
     addTearDown(router.dispose);
 
@@ -100,6 +109,7 @@ void main() {
       'y "Continuar con Google"', (WidgetTester tester) async {
     final router = buildAppRouter(
       authServiceGetter: () => getIt<AuthService>(),
+
     );
     addTearDown(router.dispose);
 
@@ -126,6 +136,9 @@ class _NullAuthServiceForTest implements AuthService {
   sb.Session? getCurrentSession() => null;
 
   @override
+  String? get currentUserId => null;
+
+  @override
   Stream<sb.AuthState> get authStateChanges =>
       const Stream<sb.AuthState>.empty();
 
@@ -144,4 +157,21 @@ class _NullAuthServiceForTest implements AuthService {
 
   @override
   Future<void> signOut() => throw UnimplementedError();
+}
+
+/// Fake de `BiometricService` para el integration test runner. No se usa
+/// en estos smoke tests (no hay biometría configurada en el runner);
+/// se necesita solo para satisfacer la firma de `buildAppRouter`.
+class _NullBiometricServiceForTest implements BiometricService {
+  @override
+  Future<bool> isBiometricAvailable() async => false;
+
+  @override
+  Future<bool> authenticate(String reason) async => false;
+
+  @override
+  Future<bool> isBiometricEnabled({required String userId}) async => false;
+
+  @override
+  Future<void> setBiometricEnabled(bool enabled, {required String userId}) async {}
 }

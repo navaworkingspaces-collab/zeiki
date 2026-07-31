@@ -16,8 +16,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/auth/auth_exception.dart';
 import '../../../core/auth/auth_service.dart';
+import '../../../core/services/biometric_service.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../core/router/app_router.dart';
+import '../widgets/biometric_activation_dialog.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -57,6 +59,9 @@ class _LoginScreenState extends State<LoginScreen> {
         password: _passwordCtrl.text,
       );
       if (!mounted) return;
+      // HDU-005b AC5-AC9: popup "¿Activar huella?" después del login
+      // exitoso. One-shot por sesión.
+      await _maybeShowBiometricActivationDialog(context);
       router.go(AppRoute.home.path);
     } on AuthException catch (e) {
       if (!mounted) return;
@@ -87,6 +92,8 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       await auth.signInWithGoogle();
       if (!mounted) return;
+      // HDU-005b AC5-AC9: mismo popup que en el flujo de email.
+      await _maybeShowBiometricActivationDialog(context);
       router.go(AppRoute.home.path);
     } on UserCancelledAuthFlow {
       // AC10: cancelar el popup NO es error.
@@ -174,6 +181,35 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  // ============================================================
+  // Biometría (HDU-005b, AC5-AC9)
+  // ============================================================
+
+  /// Muestra el popup "¿Activar huella?" si aplica (one-shot por
+  /// sesión). Misma lógica que en `RegisterScreen`. La factoricé
+  /// aquí en vez de extraer a un helper compartido porque la lógica
+  /// es trivial (5 líneas) y mantenerla local hace más fácil leer
+  /// cada pantalla sin saltar entre archivos. Si crece (ej. más
+  /// post-auth hooks), sale a un helper.
+  Future<void> _maybeShowBiometricActivationDialog(
+    BuildContext context,
+  ) async {
+    final auth = getIt<AuthService>();
+    final biometric = getIt<BiometricService>();
+    final activation = BiometricActivationService(biometric: biometric);
+    final userId = auth.currentUserId;
+    if (userId == null) return;
+    if (!await activation.consumeIfShouldShow(userId: userId)) return;
+    if (!context.mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (_) => BiometricActivationDialog(
+        biometric: biometric,
+        userId: userId,
       ),
     );
   }
