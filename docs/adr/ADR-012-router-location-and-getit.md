@@ -122,7 +122,7 @@ import '../../features/identidad/screens/register_screen.dart';
 
 ## Sincronización con código
 
-- **Verificación:** `grep -r "import.*features" lib/core/` debe devolver SOLO los 3 imports del router. Si aparecen más, se rompió la excepción.
+- **Verificación:** `grep -r "import.*features" lib/core/` debe devolver SOLO los imports del router (`app_router.dart`). El conteo exacto puede variar según las pantallas reales que se hayan migrado — la regla es que **todos** los imports `lib/core/ → lib/features/` deben vivir en `app_router.dart`, no en otros archivos de `lib/core/`. Si aparecen en otros archivos, se rompió la excepción. (A 2026-07-31, HDU-006: 5 imports — `splash_cubit.dart`, `home_screen.dart`, `login_screen.dart`, `register_screen.dart`, `splash_screen.dart`, `unlock_screen.dart` — todos en `app_router.dart`.)
 - **Lint custom (futuro):** se podría agregar una regla de `flutter_lints` o un script CI que verifique que `lib/core/` solo importa de `lib/core/` y de paquetes externos, excluyendo el router. Sale en HDU futura de CI/CD.
 
 ## Documentos relacionados
