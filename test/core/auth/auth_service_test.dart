@@ -224,6 +224,23 @@ void main() {
     });
   });
 
+  group('currentUserId (HDU-005b, KEY por usuario en secure storage)', () {
+    test('sin sesión guardada → devuelve null', () {
+      stubs.session = null;
+      final service = makeService();
+      expect(service.currentUserId, isNull,
+          reason: 'sin sesión no hay userId para el flag de biometría');
+    });
+
+    test('con sesión guardada → devuelve el id del user', () {
+      stubs.session = fakeSession(email: 'hugo@zeiki.app');
+      final service = makeService();
+      expect(service.currentUserId, 'user-id-1',
+          reason: 'currentUserId se usa como KEY en secure storage para '
+              'aislar el flag de biometría por cuenta');
+    });
+  });
+
   group('authStateChanges', () {
     test('expone el stream que devuelve la función inyectada', () async {
       final controller = StreamController<sb.AuthState>.broadcast();

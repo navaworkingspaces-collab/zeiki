@@ -174,8 +174,17 @@ class AuthService {
   /// del router para decidir a dónde mandar al usuario.
   sb.Session? getCurrentSession() => _getCurrentSessionFn();
 
-  /// Stream de cambios de auth. Se expone para uso futuro (HDU-005b /
-  /// HDU-006). Hoy nadie lo consume.
+  /// Devuelve el `id` del usuario actual o `null` si no hay sesión.
+  ///
+  /// Se usa como KEY por usuario en `flutter_secure_storage` para
+  /// que el flag de biometría esté aislado por cuenta (HDU-005b,
+  /// AC3). Si dos personas comparten el dispositivo, cada una tiene
+  /// su propio flag.
+  String? get currentUserId => _getCurrentSessionFn()?.user.id;
+
+  /// Stream de cambios de auth. Se conecta al `GoRouter.refreshListenable`
+  /// en `service_locator.dart` (HDU-005b AC22). Cuando el usuario hace
+  /// signOut, el stream emite y el router re-evalúa el `redirect`.
   Stream<sb.AuthState> get authStateChanges => _authStateChangeFn();
 }
 
