@@ -68,6 +68,14 @@ dependencies:
   # funcione en QA.
   local_auth: ^2.3.0
 
+  # Versión de la app para el footer del splash (HDU-006 v2, fix del reviewer).
+  # Devuelve `version` (X.Y.Z) de pubspec.yaml. Cross-platform (Android
+  # versionName / iOS CFBundleShortVersionString). No usamos
+  # `PlatformDispatcher.applicationVersion` porque no existe en Flutter 3.38.3
+  # (probado: el getter no está definido). El reviewer HDU-006 v1 sugirió esa
+  # API pero está mal para esta versión de Flutter.
+  package_info_plus: ^8.0.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

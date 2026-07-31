@@ -1,37 +1,33 @@
-// Smoke tests del flujo de navegación de Zeiki (HDU-004 base + HDU-005).
+// Smoke tests del flujo de navegación de Zeiki (HDU-004 base + HDU-005
+// + HDU-005b + HDU-006).
 //
 // Cubre los ACs que requieren montar la app en un widget tree:
 //
-//   - AC1 + AC2: arranca en /splash y muestra el placeholder.
-//   - AC3 + AC4: tap en un botón navega a la ruta del botón; el
-//     `MaterialApp.router` dirige la navegación.
-//   - AC7: state restoration está habilitado (`restorationScopeId`).
-//   - AC12: el `_PlaceholderPage` de HDU-001 ya no existe.
-//   - **HDU-005**: el smoke test se adaptó a las pantallas reales de
-//     login (no más placeholder `Login`) — se verifica el AppBar
-//     "Iniciar sesión" en vez del texto "Login" del placeholder.
+//   - HDU-006: el splash real arranca en /splash y, al completarse,
+//     navega a /login (porque no hay sesión). El `SplashScreen`
+//     (no el `SplashPlaceholder` viejo) se renderiza.
+//   - AC7 de HDU-004: state restoration está habilitado.
+//   - AC4, AC12 de HDU-001: el `_PlaceholderPage` viejo ya no existe.
+//   - El redirect del router funciona: ir a /home sin sesión → /login.
 //
-// **Lo que cambió de HDU-004 a HDU-005:**
-//   - `appRouter` ya no es variable global. Se construye con
-//     `buildAppRouter(authServiceGetter: ...)` después de registrar
-//     un `AuthService` fake en GetIt.
-//   - `/login` ahora es `LoginScreen` (form), no el placeholder
-//     con 2 botones. El smoke test de "tap en un botón y navega"
-//     ya no aplica al login; la navegación a /home ahora requiere
-//     haber pasado por signIn (testeado en register/login/home
-//     screens específicos).
-//   - `/home` ahora es `HomeScreen` (email + "Salir"), no el
-//     placeholder con 2 botones. Igual: navegar a /home ahora
-//     requiere sesión (cubierto por el redirect + tests de pantallas).
+// **Lo que cambió de HDU-005 a HDU-006:**
+//   - El `SplashPlaceholder` (andamio de HDU-004) se reemplazó por
+//     el `SplashScreen` real (branding + feature flag + animaciones).
+//   - El `BlocProvider<SplashCubit>` se provee a nivel de app
+//     (`main.dart`). El smoke test hereda este Cubit.
+//   - Para que el splash no bloquee los smoke tests, registramos un
+//     `TierService` con `AppFeature.splash = false` → el splash
+//     auto-navega sin reproducir las animaciones de entrada.
 //
 // Por la naturaleza de los cambios, este archivo se enfoca en:
-//   - Arrancar en /splash.
+//   - El splash real se renderiza (sin necesidad de ver branding).
 //   - State restoration.
-//   - _PlaceholderPage de HDU-001 ya no existe.
-//   - El redirect del router funciona (ir a /home sin sesión → /login).
+//   - `_PlaceholderPage` de HDU-001 ya no existe.
+//   - El redirect del router funciona.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as sb;
 
 import 'package:zeiki/core/auth/auth_exception.dart';
@@ -40,11 +36,18 @@ import 'package:zeiki/core/services/biometric_service.dart';
 import 'package:zeiki/core/auth/google_sign_in_handler.dart';
 import 'package:zeiki/core/di/service_locator.dart';
 import 'package:zeiki/core/router/app_router.dart';
+import 'package:zeiki/core/tiers/app_feature.dart';
+import 'package:zeiki/core/tiers/tier_change.dart';
+import 'package:zeiki/core/tiers/tier_service.dart';
+import 'package:zeiki/core/tiers/tier_service_config.dart';
+import 'package:zeiki/features/identidad/blocs/splash_cubit.dart';
 import 'package:zeiki/main.dart';
 
 void main() {
   late GoRouter router;
   late _FakeAuthService fakeAuth;
+  late _FakeTierService tier;
+  late SplashCubit cubit;
 
   setUp(() async {
     // Reset GetIt entre tests para que el singleton de GoRouter (de
@@ -53,50 +56,84 @@ void main() {
       await getIt.unregister<GoRouter>();
     }
 
+    // Mock del plugin `package_info_plus` (HDU-006 v2, fix del reviewer).
+    // Sin esto, `PackageInfo.fromPlatform()` lanza en tests unitarios
+    // porque el plugin real requiere el contexto de Android/iOS. Mockeamos
+    // con la versión real del pubspec (0.1.0) para que el footer del
+    // splash pueda renderearse.
+    PackageInfo.setMockInitialValues(
+      appName: 'zeiki',
+      packageName: 'com.zeiki.zeiki',
+      version: '0.1.0',
+      buildNumber: '1',
+      buildSignature: '',
+    );
+
     fakeAuth = _FakeAuthService();
+    tier = _FakeTierService();
+    // HDU-006: el splash debe auto-navegar para que el smoke test
+    // no quede esperando 2500ms de animación. Ponemos el flag en OFF.
+    tier.flags[AppFeature.splash] = false;
+
     getIt.registerSingleton<AuthService>(fakeAuth);
     getIt.registerSingleton<BiometricService>(_FakeBiometricService());
     getIt.registerSingleton<GoogleSignInHandler>(
       const GoogleSignInHandler(),
     );
+    getIt.registerSingleton<TierService>(tier);
+
+    cubit = SplashCubit();
     router = buildAppRouter(
       authServiceGetter: () => getIt<AuthService>(),
+      splashCubit: cubit,
     );
   });
 
   tearDown(() async {
+    await cubit.close();
     router.dispose();
     await getIt.reset();
   });
 
-  testWidgets('arranca en /splash y muestra el placeholder Splash',
-      (WidgetTester tester) async {
+  testWidgets('arranca en /splash, el SplashScreen se monta y, con el flag '
+      'splash OFF, auto-navega a /login (sin sesión)', (tester) async {
+    // `ZeikiApp` envuelve el árbol con `BlocProvider<SplashCubit>` en
+    // `main.dart`. El smoke test verifica que la app arranca sin
+    // crashear y que el splash se reemplaza por la ruta real.
     await tester.pumpWidget(ZeikiApp(router: router));
     await tester.pumpAndSettle();
 
-    // Texto grande del placeholder de splash.
-    expect(find.text('Splash'), findsOneWidget);
-    // Botones de navegación que el splash expone.
-    expect(find.text('Ir a Onboarding'), findsOneWidget);
-    expect(find.text('Ir a Login'), findsOneWidget);
+    // Con flag OFF + sin sesión, el splash se auto-navegó al destino
+    // real, que es /login (el redirect manda /home → /login sin sesión).
+    expect(
+      router.routerDelegate.currentConfiguration.uri.path,
+      '/login',
+      reason:
+          'flag splash OFF + sin sesión → el splash se auto-navega y el '
+          'redirect manda a /login',
+    );
   });
 
-  testWidgets('botón "Ir a Login" en /splash navega a /login (placeholder → '
-      'pantalla real)', (WidgetTester tester) async {
+  testWidgets('con el flag splash ON, el splash renderiza el branding '
+      'mientras está en /splash', (tester) async {
+    // Sobreescribimos el flag para este test: el splash debe mostrar
+    // "ZEIKI" y "LOADING" durante la animación de entrada.
+    tier.flags[AppFeature.splash] = true;
+
     await tester.pumpWidget(ZeikiApp(router: router));
-    await tester.pumpAndSettle();
+    await tester.pump();
 
-    await tester.tap(find.text('Ir a Login'));
-    await tester.pumpAndSettle();
-
-    // El `LoginScreen` real tiene AppBar con título "Iniciar sesión"
-    // (no el texto "Login" del placeholder viejo).
-    expect(find.text('Iniciar sesión'), findsOneWidget);
+    // Después del primer frame (sin pumpAndSettle para no completar
+    // las animaciones), el branding debe estar en el árbol.
+    expect(find.text('ZEIKI'), findsOneWidget);
+    expect(find.text('LOADING'), findsOneWidget);
   });
 
   testWidgets('redirect manda a /login cuando se intenta ir a /home sin '
       'sesión (AC24)', (WidgetTester tester) async {
-    // Forzamos navegación a /home con sesión nula.
+    // Forzamos navegación a /home con sesión nula. El splash se
+    // auto-navegó primero (flag OFF), así que estamos en /login. Ir
+    // a /home debe disparar el redirect → /login.
     fakeAuth.session = null;
     await tester.pumpWidget(ZeikiApp(router: router));
     await tester.pumpAndSettle();
@@ -203,4 +240,31 @@ class _FakeBiometricService implements BiometricService {
 
   @override
   Future<void> setBiometricEnabled(bool enabled, {required String userId}) async {}
+}
+
+/// `TierService` fake con el flag `splash` configurable. El splash
+/// consulta `tier.has(AppFeature.splash)` en `initState` (HDU-006).
+class _FakeTierService implements TierService {
+  final Map<AppFeature, bool> flags = <AppFeature, bool>{};
+
+  @override
+  bool has(AppFeature feature) => flags[feature] ?? false;
+
+  @override
+  bool isCacheLoaded() => flags.isNotEmpty;
+
+  @override
+  Stream<TierChange> get changes => const Stream<TierChange>.empty();
+
+  @override
+  Future<void> refresh({bool force = false}) async {}
+
+  @override
+  Future<void> initialize({TierServiceConfig? config}) async {}
+
+  @override
+  void dispose() {}
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

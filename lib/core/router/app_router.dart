@@ -1,5 +1,5 @@
 // Router declarativo de Zeiki (HDU-004 base, HDU-005 extiende, HDU-005b
-// biometría + unlock).
+// biometría + unlock, HDU-006 splash real).
 import 'dart:async';
 //
 // Cambios de HDU-005:
@@ -27,6 +27,13 @@ import 'dart:async';
 //     desde cualquier pantalla hace que el router re-evalúe el
 //     `redirect` automáticamente (sin tocar la pantalla).
 //
+// Cambios de HDU-006 (esta HDU):
+//   - **Splash real:** la ruta `/splash` ya no renderiza
+//     `SplashPlaceholder` (andamio de HDU-004) sino `SplashScreen`.
+//     El widget se envuelve en `BlocProvider<SplashCubit>` para que la
+//     máquina de estados del splash (loading → ready → hidden) sea
+//     inyectable y testeable.
+//
 // **Por qué el redirect NO consulta biometricEnabled:** el redirect
 // aplica a CADA navegación, no solo al cold start. Si el user está
 // en /home, hace logout, y va a /login, el redirect NO debe
@@ -35,15 +42,17 @@ import 'dart:async';
 // el router (en `service_locator.dart`); después, el UnlockScreen
 // mismo decide a dónde ir (éxito → /home, fallo 3x → /login).
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../auth/auth_service.dart';
+import '../../features/identidad/blocs/splash_cubit.dart';
 import '../../features/identidad/screens/home_screen.dart';
 import '../../features/identidad/screens/login_screen.dart';
 import '../../features/identidad/screens/register_screen.dart';
+import '../../features/identidad/screens/splash_screen.dart';
 import '../../features/identidad/screens/unlock_screen.dart';
 import 'screens/onboarding_placeholder.dart';
-import 'screens/splash_placeholder.dart';
 
 /// Rutas declaradas por el router. El `.path` es lo que se usa en
 /// `context.go(...)` y en `findMatch(route: ...)`.
@@ -119,18 +128,38 @@ String? computeAuthRedirect({
 /// `initialLocation` permite que `service_locator.dart` elija `/unlock`
 /// como punto de partida en el cold start cuando hay sesión +
 /// biometría habilitada. Default: `/splash`.
+///
+/// `splashCubit` (HDU-006): si se pasa, el `BlocProvider` de la
+/// ruta `/splash` envuelve el Cubit pasado (en vez de crear uno
+/// nuevo). Esto permite que los tests inyecten un Cubit controlado
+/// sin tener que `pumpAndSettle` para esperar las animaciones. En
+/// producción se deja null y se crea uno nuevo.
 GoRouter buildAppRouter({
   required AuthService Function() authServiceGetter,
   Stream<void>? refreshStream,
   String initialLocation = '/splash',
+  SplashCubit? splashCubit,
 }) {
   return GoRouter(
     initialLocation: initialLocation,
     routes: <RouteBase>[
       GoRoute(
         path: AppRoute.splash.path,
-        builder: (BuildContext context, GoRouterState state) =>
-            const SplashPlaceholder(),
+        // El `BlocProvider<SplashCubit>` se provee aquí solo si el
+        // router recibió un Cubit inyectado (vía `splashCubit:`).
+        // En producción NO se pasa (el router solo enruta) y el
+        // Cubit se provee en `main.dart` con un `BlocProvider` de
+        // app-level. En tests se pasa para inyectar un Cubit
+        // controlado.
+        builder: (BuildContext context, GoRouterState state) {
+          if (splashCubit != null) {
+            return BlocProvider<SplashCubit>.value(
+              value: splashCubit,
+              child: const SplashScreen(),
+            );
+          }
+          return const SplashScreen();
+        },
       ),
       GoRoute(
         path: AppRoute.onboarding.path,

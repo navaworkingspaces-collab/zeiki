@@ -91,6 +91,22 @@ class TierService {
   /// el cache. Los listeners solo reciben cambios reales.
   Stream<TierChange> get changes => _controller.stream;
 
+  /// Indica si el cache ya tiene datos (al menos un feature cargado).
+  ///
+  /// **Caso de uso (HDU-006 v3):** en la primera instalación, el cache
+  /// está vacío hasta que el primer `refresh()` (fire-and-forget) complete.
+  /// Las UIs que tienen un fail-safe de "mostrar por default" necesitan
+  /// distinguir entre "el flag está OFF" y "todavía no sé el flag". Esta
+  /// API les permite hacer esa distinción.
+  ///
+  /// Retorna `true` si el cache tiene al menos un feature cargado
+  /// (post-refresh exitoso) o si hay un override de debug activo.
+  /// Retorna `false` si el cache está frío (primera instalación, red
+  /// caída, refresh aún no completa).
+  bool isCacheLoaded() {
+    return _cache.isNotEmpty || _config.debugEnabled;
+  }
+
   /// Devuelve si un feature está habilitado. **Sincrónica** (AC3) —
   /// consulta el cache local en memoria, no pega a la red. Latencia
   /// < 1 ms.
