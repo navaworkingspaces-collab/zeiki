@@ -21,6 +21,7 @@ import 'package:go_router/go_router.dart';
 import '../auth/auth_service.dart';
 import '../services/biometric_service.dart';
 import '../auth/google_sign_in_handler.dart';
+import '../constants/env_config.dart';
 import '../router/app_router.dart';
 import '../tiers/tier_service.dart';
 
@@ -32,7 +33,11 @@ final GetIt getIt = GetIt.instance;
 /// `main.dart` después de `initSupabase(env)`. Idempotente: si se
 /// llama dos veces, la segunda es no-op (los registros existentes
 /// se conservan).
-void setupServiceLocator() {
+///
+/// [env] se requiere para que el `GoogleSignInHandler` reciba el
+/// `webClientId` (BUG-001). El handler se construye lazy — el `env`
+/// se captura en el closure del factory, no se retiene fuera de GetIt.
+void setupServiceLocator(EnvConfig env) {
   // `TierService` se registra como singleton lazy para que:
   //   1. No se cree hasta que alguien lo pida (ahorra memoria en
   //      arranque frío).
@@ -52,10 +57,15 @@ void setupServiceLocator() {
   // lo encuentre con `getIt<GoogleSignInHandler>()` cuando se cree.
   if (!getIt.isRegistered<GoogleSignInHandler>()) {
     getIt.registerLazySingleton<GoogleSignInHandler>(
-      // Factory: `registerLazySingleton` espera `T Function()`, no
-      // un valor. El handler tiene un const constructor así que
-      // construirlo en cada `getIt<...>()` es prácticamente gratis.
-      () => const GoogleSignInHandler(),
+      // BUG-001 fix: el handler se construye con el Web OAuth Client ID
+      // del env. Sin esto, el plugin `google_sign_in` no puede pedir el
+      // `idToken` al servidor de Google y el flujo se queda colgado
+      // silenciosamente. Ver `specs/BUG-001-google-signin.md`.
+      //
+      // El handler NO es const aquí (el `webClientId` es runtime),
+      // pero se construye lazy — el costo es 1 alloc al primer
+      // `getIt<GoogleSignInHandler>()`.
+      () => GoogleSignInHandler(webClientId: env.googleWebClientId),
     );
   }
   if (!getIt.isRegistered<AuthService>()) {

@@ -75,7 +75,12 @@ Future<void> main() async {
   // ya lo encuentre inicializado. `setupServiceLocator` ahora registra
   // también `AuthService`, `GoogleSignInHandler`, `BiometricService`
   // y `GoRouter` (HDU-005 + HDU-005b).
-  setupServiceLocator();
+  //
+  // BUG-001: `env` se pasa para que el `GoogleSignInHandler` reciba
+  // el `webClientId` (Web OAuth Client ID de Google). Sin esto, el
+  // flujo de Google Sign-In se queda colgado silenciosamente porque
+  // el plugin devuelve `idToken=null` al no tener `serverClientId`.
+  setupServiceLocator(env);
 
   // Pre-calienta `AuthService` para que `getCurrentSession()` esté
   // disponible ANTES del primer redirect del router. Si no, el redirect

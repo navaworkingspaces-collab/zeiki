@@ -18,6 +18,7 @@ class EnvConfig {
     required this.supabaseAnonKey,
     required this.appEnv,
     required this.debugLogs,
+    required this.googleWebClientId,
   });
 
   /// URL del proyecto Supabase. **No es un secreto** — va en el APK
@@ -38,6 +39,14 @@ class EnvConfig {
   /// a la consola. En producción esto debería ser `false`.
   final bool debugLogs;
 
+  /// Web OAuth Client ID de Google (formato: `xxxxx.apps.googleusercontent.com`).
+  /// Requerido por el `google_sign_in` plugin para pedir el `idToken` al
+  /// servidor de Google (BUG-001, HDU-005). Es el **Web** client (no el
+  /// Android), porque el `idToken` lo emite el backend de Google, no el
+  /// cliente Android. **No es un secreto** — es un identificador público.
+  /// Ver `docs/runbooks/google-signin-supabase.md` para cómo obtenerlo.
+  final String googleWebClientId;
+
   /// Construye el [EnvConfig] leyendo de un [DotEnv] ya cargado. Falla
   /// rápido con `ArgumentError` si una variable requerida está vacía o
   /// no existe. Las variables opcionales (con default) se defaultean
@@ -45,6 +54,7 @@ class EnvConfig {
   factory EnvConfig.fromDotEnv(DotEnv dotenv) {
     final supabaseUrl = _readRequired(dotenv, 'SUPABASE_URL');
     final supabaseAnonKey = _readRequired(dotenv, 'SUPABASE_ANON_KEY');
+    final googleWebClientId = _readRequired(dotenv, 'GOOGLE_WEB_CLIENT_ID');
     final appEnv = dotenv.maybeGet('APP_ENV') ?? 'development';
     final debugLogsRaw = dotenv.maybeGet('DEBUG_LOGS') ?? 'false';
 
@@ -53,6 +63,7 @@ class EnvConfig {
       supabaseAnonKey: supabaseAnonKey,
       appEnv: appEnv,
       debugLogs: debugLogsRaw.toLowerCase() == 'true',
+      googleWebClientId: googleWebClientId,
     );
   }
 

@@ -58,4 +58,50 @@ void main() {
       );
     });
   });
+
+  // BUG-001 regression: el `webClientId` (Web OAuth Client ID de Google)
+  // DEBE fluir desde `EnvConfig` → `service_locator` → `GoogleSignInHandler`
+  // → `GoogleSignIn(serverClientId: ...)`. Si alguien borra el parámetro
+  // del constructor o se olvida de pasarlo en el service_locator, este
+  // test falla. Es la red de seguridad contra la regresión de BUG-001.
+  group('GoogleSignInHandler — BUG-001 regression', () {
+    test('expone el webClientId que se le pasa al constructor', () {
+      // Caso production: el service_locator pasa el webClientId del env.
+      final handler = GoogleSignInHandler(
+        webClientId: '123456789-abc.apps.googleusercontent.com',
+      );
+      expect(
+        handler.webClientId,
+        '123456789-abc.apps.googleusercontent.com',
+        reason:
+            'BUG-001 regression: webClientId debe propagarse desde el '
+            'constructor hasta la propiedad pública. Si esto es null, el '
+            'GoogleSignIn() no recibe serverClientId y el idToken vuelve '
+            'null (el bug original).',
+      );
+    });
+
+    test('webClientId es null cuando NO se pasa (caso tests con signInFn)', () {
+      // En tests, normalmente NO se pasa webClientId — el signInFn
+      // inyectado se usa en lugar del plugin real. El webClientId
+      // queda null, lo cual es OK porque _defaultSignIn no se llama.
+      final handler = GoogleSignInHandler(
+        signInFn: () async => 'fake-token',
+      );
+      expect(
+        handler.webClientId,
+        isNull,
+        reason:
+            'En tests con signInFn, webClientId debe ser null (no se usa).',
+      );
+    });
+
+    test('const constructor sigue funcionando con webClientId null', () {
+      // El const se usa en `const GoogleSignInHandler()` (sin args).
+      // Después de BUG-001, sigue funcionando porque el webClientId
+      // default es null.
+      const handler = GoogleSignInHandler();
+      expect(handler.webClientId, isNull);
+    });
+  });
 }

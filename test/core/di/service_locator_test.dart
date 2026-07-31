@@ -33,6 +33,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:zeiki/core/auth/auth_service.dart';
 import 'package:zeiki/core/auth/google_sign_in_handler.dart';
+import 'package:zeiki/core/constants/env_config.dart';
 import 'package:zeiki/core/di/service_locator.dart';
 import 'package:zeiki/core/tiers/tier_service.dart';
 
@@ -43,6 +44,20 @@ void main() {
     await getIt.reset();
   });
 
+  // `EnvConfig` fake con valores dummy. El `service_locator` solo lee
+  // `env.googleWebClientId` (lo pasa al `GoogleSignInHandler`), los
+  // demás campos no se usan en estos tests. Si `setupServiceLocator`
+  // empieza a leer más campos, este fake se ajusta.
+  // BUG-001: este fake es el que evita que `setupServiceLocator`
+  // lance al boot de los tests por falta de `.env` real.
+  final testEnv = EnvConfig(
+    supabaseUrl: 'https://test.supabase.co',
+    supabaseAnonKey: 'test-anon-key',
+    appEnv: 'test',
+    debugLogs: false,
+    googleWebClientId: 'test-web-client-id.apps.googleusercontent.com',
+  );
+
   group('setupServiceLocator()', () {
     test('registra TierService en GetIt (regression HDU-003)', () {
       // Antes de llamar setupServiceLocator, NO debe estar registrado
@@ -50,7 +65,7 @@ void main() {
       expect(getIt.isRegistered<TierService>(), isFalse,
           reason: 'asumimos estado limpio (tearDown del test anterior)');
 
-      setupServiceLocator();
+      setupServiceLocator(testEnv);
 
       // Después de llamar, SÍ está registrado.
       expect(getIt.isRegistered<TierService>(), isTrue,
@@ -64,7 +79,7 @@ void main() {
       expect(getIt.isRegistered<AuthService>(), isFalse);
       expect(getIt.isRegistered<GoogleSignInHandler>(), isFalse);
 
-      setupServiceLocator();
+      setupServiceLocator(testEnv);
 
       expect(getIt.isRegistered<AuthService>(), isTrue,
           reason: 'AuthService debe estar registrado en GetIt (HDU-005 AC2)');
@@ -78,7 +93,7 @@ void main() {
           reason: 'antes de setupServiceLocator, GoRouter NO debe estar '
               'registrado (asumimos estado limpio)');
 
-      setupServiceLocator();
+      setupServiceLocator(testEnv);
 
       expect(getIt.isRegistered<GoRouter>(), isTrue,
           reason: 'GoRouter debe estar registrado en GetIt (HDU-005 AC23 — '
@@ -88,9 +103,9 @@ void main() {
 
     test('es idempotente: llamarlo 2 veces NO lanza (lo usan los '
         'integration tests entre casos)', () {
-      setupServiceLocator();
+      setupServiceLocator(testEnv);
       // El segundo call NO debe lanzar "already registered".
-      expect(setupServiceLocator, returnsNormally,
+      expect(() => setupServiceLocator(testEnv), returnsNormally,
           reason: 'setupServiceLocator debe ser idempotente: chequea '
               'isRegistered antes de registrar. Los integration tests '
               'confían en esto para hacer reset + re-registro entre tests');
@@ -98,7 +113,7 @@ void main() {
 
     test('después de getIt.reset(), ningún servicio queda registrado',
         () async {
-      setupServiceLocator();
+      setupServiceLocator(testEnv);
       expect(getIt.isRegistered<TierService>(), isTrue);
       expect(getIt.isRegistered<AuthService>(), isTrue);
       expect(getIt.isRegistered<GoRouter>(), isTrue);
@@ -119,7 +134,7 @@ void main() {
     test('TierService.getInstance() devuelve el singleton registrado', () {
       // Esto es el path que usan los integration tests y main.dart.
       // Si falla, la causa #1 es que setupServiceLocator() no se llamó.
-      setupServiceLocator();
+      setupServiceLocator(testEnv);
 
       final service = TierService.getInstance();
 

@@ -29,10 +29,33 @@ import 'auth_exception.dart';
 typedef GoogleSignInFn = Future<String?> Function();
 
 class GoogleSignInHandler {
-  /// Crea un handler. Si no se pasa `signInFn`, usa el plugin real
-  /// `google_sign_in` (solo funciona en runtime con device).
-  const GoogleSignInHandler({GoogleSignInFn? signInFn})
-      : _signInFn = signInFn;
+  /// Crea un handler.
+  ///
+  /// En **tests**, se inyecta `signInFn` (fake) y se usa `const` con
+  /// el constructor sin args. El `webClientId` se ignora porque
+  /// `_defaultSignIn` no se llama.
+  ///
+  /// En **runtime**, NO se inyecta `signInFn` y se pasa `webClientId`
+  /// (constructor NO-const) con el Web OAuth Client ID. Este ID es
+  /// **requerido** por el plugin `google_sign_in` 6.x para pedir el
+  /// `idToken` al servidor de Google. Sin él, el popup aparece pero el
+  /// `idToken` viene `null` (BUG-001).
+  const GoogleSignInHandler({
+    this.webClientId,
+    GoogleSignInFn? signInFn,
+  }) : _signInFn = signInFn;
+
+  /// Web OAuth Client ID de Google (formato
+  /// `xxxxx-yyyyy.apps.googleusercontent.com`). Es el **Web** client
+  /// (no el Android), porque el `idToken` lo emite el backend de
+  /// Google. Se lee de `EnvConfig.googleWebClientId` en el
+  /// `service_locator` y se pasa aquí.
+  ///
+  /// Público (no `_webClientId`) para que el regression test de
+  /// BUG-001 pueda verificar que el valor fluye desde `EnvConfig` →
+  /// `service_locator` → handler. Es OK exponerlo: NO es un secreto,
+  /// es un identificador público de OAuth.
+  final String? webClientId;
 
   final GoogleSignInFn? _signInFn;
 
@@ -62,11 +85,18 @@ class GoogleSignInHandler {
     }
   }
 
-  /// Implementación por default usando el plugin real. Separada del
-  /// constructor para que `const GoogleSignInHandler()` siga siendo
-  /// const cuando se use con `signInFn` inyectada.
-  static Future<String?> _defaultSignIn() async {
-    final googleSignIn = GoogleSignIn();
+  /// Implementación por default usando el plugin real.
+  ///
+  /// BUG-001 fix: el plugin ahora se configura con `serverClientId`
+  /// (= web OAuth Client ID) y `scopes: [email, profile]`. Sin
+  /// `serverClientId`, el plugin no puede pedir el `idToken` al
+  /// servidor de Google y devuelve `null` aunque la autenticación sea
+  /// exitosa.
+  Future<String?> _defaultSignIn() async {
+    final googleSignIn = GoogleSignIn(
+      scopes: const <String>['email', 'profile'],
+      serverClientId: webClientId,
+    );
     final account = await googleSignIn.signIn();
     if (account == null) return null;
     final auth = await account.authentication;

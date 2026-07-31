@@ -21,6 +21,7 @@
 // `getCurrentSession()` en cada navegación, que es suficiente. El
 // stream reactivo se conectará cuando alguna pantalla lo necesite
 // (probablemente HDU-005b o HDU-006).
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:supabase_flutter/supabase_flutter.dart' as sb;
 
 import 'auth_exception.dart';
@@ -136,8 +137,13 @@ class AuthService {
   /// Lanza `UserCancelledAuthFlow` si el usuario canceló el popup
   /// (AC10). Lanza `AuthException` si Supabase rechaza el token.
   Future<AuthResult> signInWithGoogle() async {
+    // BUG-001 investigation: trazar el flujo para ver si el problema es
+    // que el idToken es null (lo lanza UserCancelledAuthFlow) o si el
+    // idToken llega pero Supabase falla. Output filtrable con
+    // `adb logcat | grep 'BUG-001'`. Se quita después de cerrar la BUG.
     final handler = _googleSignInHandler;
     if (handler == null) {
+      debugPrint('[BUG-001] signInWithGoogle: handler is null (misconfigured)');
       // Defensa: si se construyó sin handler (caso de test que no lo
       // necesita), devolver error claro. En runtime, el `service_locator`
       // SIEMPRE registra el handler.
@@ -148,18 +154,29 @@ class AuthService {
     }
 
     final idToken = await handler.signInAndGetIdToken();
+    debugPrint('[BUG-001] signInWithGoogle: idToken from handler is '
+        '${idToken == null ? "null" : "non-null (${idToken.length} chars)"}');
     if (idToken == null) {
+      debugPrint('[BUG-001] signInWithGoogle: idToken is null — throwing '
+          'UserCancelledAuthFlow (this is the suspected root cause)');
       // AC10: cancelar el popup NO es error. La UI lo captura con
       // `on UserCancelledAuthFlow catch (_)` y no muestra nada.
       throw const UserCancelledAuthFlow();
     }
 
     try {
-      return await _signInWithIdTokenFn(
+      debugPrint('[BUG-001] signInWithGoogle: calling Supabase '
+          'signInWithIdToken(provider=google, idToken length=${idToken.length})');
+      final result = await _signInWithIdTokenFn(
         provider: sb.OAuthProvider.google,
         idToken: idToken,
       );
+      debugPrint('[BUG-001] signInWithGoogle: Supabase returned '
+          'user=${result.user?.id}');
+      return result;
     } catch (e) {
+      debugPrint('[BUG-001] signInWithGoogle: Supabase threw exception: '
+          '$e (${e.runtimeType})');
       throw mapSupabaseAuthError(e);
     }
   }
