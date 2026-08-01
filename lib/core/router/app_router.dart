@@ -109,6 +109,36 @@ String? computeAuthRedirect({
   return null;
 }
 
+/// Trunca una URI para mostrarla de forma segura en el `errorBuilder`
+/// (Housekeeping bundle #3, fix #15).
+///
+/// **Por qué existe:** `state.uri` puede contener query params
+/// arbitrarios y ser muy largo. Mostrar la URI cruda en el
+/// `errorBuilder` filtra:
+///   - **PII / tokens** si el path malicioso incluye `?token=...` o
+///     similar.
+///   - **Basura visual** si la URI mide 200+ chars.
+///
+/// **Política:**
+///   - Limita la longitud a `maxLength` (default 50).
+///   - Si trunca, agrega `...`.
+///   - NO modifica la URI original — solo la representación en
+///     string. El redirect real (qué hace la app) NO depende de este
+///     helper.
+///
+/// **Limitación:** NO sanitiza por tipo de dato (no es un URL
+/// sanitizer). Solo acorta. La defensa real contra paths arbitrarios
+/// es el whitelist de `zeikiUriToPath` (fix #14) y la declaración de
+/// `<data android:host="..." />` en el `AndroidManifest.xml` (fix
+/// #16). Este helper es la red de seguridad final para que el
+/// mensaje de error no filtre información.
+String sanitizeUriForDisplay(Uri uri, {int maxLength = 50}) {
+  assert(maxLength > 0, 'maxLength debe ser positivo');
+  final raw = uri.toString();
+  if (raw.length <= maxLength) return raw;
+  return '${raw.substring(0, maxLength)}...';
+}
+
 /// Construye el `GoRouter` de Zeiki. Se llama desde
 /// `service_locator.dart` (registro lazy) o desde los tests con
 /// `AuthService` y `BiometricService` fakes.
@@ -200,7 +230,7 @@ GoRouter buildAppRouter({
     errorBuilder: (BuildContext context, GoRouterState state) => Scaffold(
       appBar: AppBar(title: const Text('Zeiki')),
       body: Center(
-        child: Text('Ruta no encontrada: ${state.uri}'),
+        child: Text('Ruta no encontrada: ${sanitizeUriForDisplay(state.uri)}'),
       ),
     ),
   );
