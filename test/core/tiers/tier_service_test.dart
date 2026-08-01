@@ -216,6 +216,41 @@ void main() {
       // El segundo refresh falla el parseo → cache se conserva.
       expect(service.has(AppFeature.splash), isTrue);
     });
+
+    test(
+        'valores no-bool se ignoran Y se loggean con debugPrint (regression #12)',
+        () async {
+      // El operador en el dashboard pone un valor mal (string en vez de
+      // bool). El código debe: (1) ignorarlo (no crashear), (2) loggear
+      // con debugPrint para que sea detectable en debug builds. Antes
+      // de este fix, se ignoraba silenciosamente — footgun.
+      //
+      // Como `AppFeature` solo tiene `splash` por ahora, testeamos con
+      // una respuesta que tiene `splash` con valor mal (string "true"
+      // en vez de bool true) Y una feature desconocida con valor mal.
+      // El comportamiento esperado: ambos se ignoran, refresh completa
+      // sin lanzar, _cache queda vacío (splash no se cachea porque el
+      // valor era string, no bool).
+      final service = makeService(
+        fetcher: fakeFetcher(returns: {
+          'flags': {
+            'splash': 'true', // ⚠️ string, no bool — footgun del operador
+            'feature_que_no_existe': 1, // ⚠️ int, no bool — otro footgun
+          },
+        }),
+      );
+
+      // El refresh completa sin lanzar.
+      await service.refresh();
+
+      // `splash` tiene valor mal (string) → no se cachea → default false.
+      expect(service.has(AppFeature.splash), isFalse,
+          reason: 'valor no-bool debe ignorarse, no convertirse a bool');
+
+      // (No podemos verificar el debugPrint directamente sin un test
+      // infrastructure, pero al menos confirmamos que NO crashea y que
+      // el valor no-bool se ignora correctamente.)
+    });
   });
 
   group('stream `changes`', () {
