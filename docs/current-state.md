@@ -115,7 +115,10 @@
 
 ## 🔜 Próximos pasos sugeridos (secuencia decidida con Hugo)
 
-- **BUG-001 (PRIORIDAD ALTA):** Google Sign-In no completa el flujo. Es la **primera BUG del proyecto** (namespace BUG-XXX separado de HDU-XXX). Spec en [`specs/BUG-001-google-signin.md`](../specs/BUG-001-google-signin.md). Síntoma confirmado, causa probable: `serverClientId` no configurado en `GoogleSignIn()` (el `idToken` vuelve null → el `AuthService` lanza `UserCancelledAuthFlow` → la UI lo captura silenciosamente). Sistemas externos: Google Cloud Console (OAuth clients), Supabase dashboard (Auth providers), `google_sign_in` 6.x plugin. Plan: confirmar causa con `debugPrint` + `adb logcat`, aplicar fix (agregar `serverClientId` y `scopes`), regression test, QA en Xiaomi, actualizar runbook.
+- **Decidir la siguiente unidad de trabajo.** Opciones:
+  - **Housekeeping bundle #2:** quedan 14 follow-ups non-blocker (#3, #4, #7, #9, #10, #13, #14, #15, #16, #18, #21, #27 + 1 nuevo que aparezca). Podemos hacer otra ronda corta.
+  - **HDU-007 / HDU-008 (feature):** próximo paso del feature roadmap (ej. onboarding, fiscal, descarga de CFDIs, etc.).
+  - **Pausa / descanso** — ha sido un día largo, hemos cerrado 7 HDUs + 1 BUG + 1 housekeeping bundle en una sesión.
 
 ## 🐛 Follow-ups activos (de HDUs cerradas)
 
@@ -131,7 +134,7 @@
 | 8 | HDU-002 | Refactor: extraer `setUpAll` duplicado en 3 integration tests a helper compartido cuando se agreguen más tests en HDU-003. | baja | **completado** (test 8 dedicado) |
 | 9 | HDU-003 | Helper `registerLazySingletonIfNotRegistered<T>(factory)` para no repetir el patrón en futuros servicios (`AuthService`, `BiometricService`, etc.). | baja | pendiente (HDU futura) |
 | 10 | HDU-003 | Conectar `tier_service_config.refreshInterval` con `Timer.periodic` cuando llegue la HDU de refresh automático. | baja | pendiente (HDU futura) |
-| 11 | HDU-003 | `debugPrint` con la excepción en `refresh()` — sanitizar cuando el fetcher reciba más contexto (HDU-005 con auth). | baja | observation |
+| 11 | HDU-003 | `debugPrint` con la excepción en `refresh()` — sanitizar cuando el fetcher reciba más contexto (HDU-005 con auth). | baja | **completado (housekeeping bundle #1)** |
 | 12 | HDU-003 | `_parseFlags` ignora tipos no-bool silenciosamente — loggear con `debugPrint` cuando se ignore un valor. | baja | pendiente (HDU futura) |
 | 13 | HDU-003 | CLI `feature_manifest` (Target §15, aspiración) — genera doc auto-generada a partir del enum `AppFeature`. | baja | aspiración (Target §15) |
 | 14 | HDU-004 | Whitelist de hosts válidos para `zeikiUriToPath`. Crece naturalmente con HDU-005/006. | baja | pendiente (HDU futura) |
@@ -139,17 +142,19 @@
 | 16 | HDU-004 | Restringir intent filter `zeiki://` a hosts específicos en `AndroidManifest.xml`. Mismo motivo que #14. | baja | pendiente (HDU futura) |
 | 17 | HDU-004 | Mover `appRouter` a GetIt como singleton lazy. Necesario cuando llegue HDU-005 (auth con `redirect:`) y `AuthService`. | media | bloqueante para HDU-005 (decidir si en esta HDU o aparte) |
 | 18 | HDU-004 | Cobertura del integration test en CI: back nativo + rotación + deep link end-to-end con `adb` automatizados. | baja | pendiente (cuando se configure CI) |
-| 19 | HDU-004 | Regla "push para detail/sheet, go para tab/sección" — documentar como patrón canónico cuando haya más navegación. | baja | pendiente (HDU futura) |
-| 20 | HDU-004 | `android:label="zeiki"` en minúsculas (debería ser "Zeiki" con Z mayúscula). Pre-existente a HDU-001. | baja | chore (HDU corta de branding) |
+| 19 | HDU-004 | Regla "push para detail/sheet, go para tab/sección" — documentar como patrón canónico cuando haya más navegación. | baja | **completado (housekeeping bundle #1)** |
+| 20 | HDU-004 | `android:label="zeiki"` en minúsculas (debería ser "Zeiki" con Z mayúscula). Pre-existente a HDU-001. | baja | **completado (housekeeping bundle #1)** |
 | 21 | HDU-004 | Renombrar test de "rotación" a "router conserva ruta tras rebuild" — el nombre actual es engañoso. | baja | chore (HDU corta) |
-| 22 | **HDU-005** | **BUG:** Google Sign-In no completa el flujo — selector de cuenta aparece, seleccionar cuenta → no pasa nada. Detectado en QA post-HDU-006 (no en test). 113/113 tests + 3 rondas de review no lo cacharon. | **alta** | **BUG-001 abierta (primer BUG del proyecto)** |
-| 23 | HDU-006 | Redundancia entre grupos "cache cold" y "feature flag OFF" en `splash_screen_test.dart`. | baja | pendiente (HDU corta de test cleanup) |
-| 24 | HDU-006 | Nit de naming en el grupo "cache cold" (un test no es realmente cold porque setea un flag). | baja | pendiente (chore) |
-| 25 | HDU-006 | Fake `_FakeTierService.isCacheLoaded()` retorna `flags.isNotEmpty`; el real retorna `_cache.isNotEmpty \|\| _config.debugEnabled`. Mismatch pequeño. | baja | pendiente (chore) |
-| 26 | HDU-006 | Edge case: si el operador olvidó seedear `splash` en Supabase, el splash se salta. Documentar en runbook. | baja | pendiente (chore) |
+| 22 | **HDU-005** | **BUG:** Google Sign-In no completa el flujo — selector de cuenta aparece, seleccionar cuenta → no pasa nada. Detectado en QA post-HDU-006 (no en test). 113/113 tests + 3 rondas de review no lo cacharon. | **alta** | **completado (BUG-001 cerrada, PR #9)** |
+| 23 | HDU-006 | Redundancia entre grupos "cache cold" y "feature flag OFF" en `splash_screen_test.dart`. | baja | **completado (housekeeping bundle #1)** |
+| 24 | HDU-006 | Nit de naming en el grupo "cache cold" (un test no es realmente cold porque setea un flag). | baja | **completado (housekeeping bundle #1)** |
+| 25 | HDU-006 | Fake `_FakeTierService.isCacheLoaded()` retorna `flags.isNotEmpty`; el real retorna `_cache.isNotEmpty \|\| _config.debugEnabled`. Mismatch pequeño. | baja | **completado (housekeeping bundle #1)** |
+| 26 | HDU-006 | Edge case: si el operador olvidó seedear `splash` en Supabase, el splash se salta. Documentar en runbook. | baja | **completado (housekeeping bundle #1)** |
 | 27 | HDU-006 | Wrapper de `package_info_plus` en `core/services/` — se usa directo en `splash_screen.dart`. Si aparece un segundo callsite, extraer. | baja | observation (extraer cuando haya 2º callsite) |
-| 28 | HDU-006 | Test del `catch (_)` de `_loadAppVersion` — coverage gap. Si alguien borra el try/catch, ningún test lo detecta. | baja | pendiente (chore) |
+| 28 | HDU-006 | Test del `catch (_)` de `_loadAppVersion` — coverage gap. Si alguien borra el try/catch, ningún test lo detecta. | baja | **completado (housekeeping bundle #1, documentado como no-testeable)** |
 | 29 | **Lección #8 (memoria)** | **Tests verde NO es app funcionando. QA en device real es obligatorio antes de merge para cualquier HDU con OAuth / push / deep links / biometría nativa / pagos.** | alta | regla operativa (cross-project) |
+| 30 | **BUG-001** | **`AuthService.signOut()` también desloguea de Google** — sin esto, el chooser "recordaba" la cuenta después del signOut. | **alta** | **completado (housekeeping bundle #1)** |
+| 31 | **BUG-001** | **Convención "OAuth Client IDs NO son secretos, van en `.env`"** documentada en `conventions.md`. | media | **completado (housekeeping bundle #1)** |
 
 ## 📚 Lecciones aprendidas recientes
 
