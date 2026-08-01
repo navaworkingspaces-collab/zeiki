@@ -143,6 +143,20 @@ flutter test integration_test/splash_flow_test.dart -d 2203129G
 2. Re-launch (cold start).
 3. Si sigue, esperar 1 minuto para que el cache de la edge function expire.
 
+### El splash se salta aunque el flag está ON (operador olvidó seedear el flag)
+
+**Causa:** si el operador de Supabase **agregó el feature `splash` al `app_tier_features` pero olvidó marcar `is_enabled = true` para algún tier** (ej. `development` o `production`), el cliente recibe `is_enabled = false` y el splash se salta. El fail-safe "ON" del splash (mostrar cuando cache cold) **NO** activa porque el cache sí está cargado (la respuesta del edge function llegó, solo que con `false`).
+
+**Cómo detectar:** el splash se salta en TODAS las instalaciones, no solo en la primera. Si pasa en cold start pero el usuario esperaba verlo, es este caso.
+
+**Cómo arreglar:**
+1. Ve al dashboard de Supabase → Table Editor → `app_tier_features`.
+2. Filtra por `feature = 'splash'`.
+3. Verifica que `is_enabled = true` para el tier relevante (probablemente `development` o `production`).
+4. Si no, edita y guarda. El cliente verá el cambio en ~1 minuto (TTL del cache).
+
+**Prevención:** al agregar un feature nuevo, el `seed.sql` de la migración debe setear `is_enabled = true` para el tier default. Ver `supabase/migrations/` para los seeds.
+
 ### La edge function devuelve error 500
 
 **Causa probable:** problema de Supabase (caída, mantenimiento).

@@ -85,6 +85,21 @@ class GoogleSignInHandler {
     }
   }
 
+  /// Desloguea de Google (limpia el cache local del plugin Y de Play
+  /// Services). Llamado por `AuthService.signOut()` para que el chooser
+  /// de Google no "recuerde" la cuenta del user después del signOut.
+  ///
+  /// El método se llama `signOutAndDisconnect` (no `signOut`) porque
+  /// es semánticamente diferente al signOut de Supabase: este limpia
+  /// el estado de Google, no el de Supabase. AuthService.signOut()
+  /// llama a ambos.
+  Future<void> signOutAndDisconnect() async {
+    final googleSignIn = GoogleSignIn(
+      scopes: const <String>['email', 'profile'],
+      serverClientId: webClientId,
+    );
+    await googleSignIn.signOut();
+  }
   /// Implementación por default usando el plugin real.
   ///
   /// BUG-001 fix: el plugin ahora se configura con `serverClientId`

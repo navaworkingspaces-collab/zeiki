@@ -104,6 +104,8 @@ Un juicio subjetivo en cada PR.
 - Nombres describen intención, no implementación.
 - Getters sin prefijo `get`: `displayName` (no `getDisplayName`).
 - BLoCs (cuando aplique): events en pasado/sustantivo, states como adjetivo/sustantivo, clase con sufijo `Bloc`.
+- **OAuth Client IDs y API Keys públicas NO son secretos, pero tampoco van hardcodeadas en código.** Van en `.env` (gitignored), con la variable en `SCREAMING_SNAKE_CASE` (ej. `GOOGLE_WEB_CLIENT_ID`). Razones: (a) cada dev/ambiente puede tener su propio valor sin tocar código; (b) si se rotan, solo se cambia `.env`; (c) el código no depende del string literal para ser compilable. Diferencia con los secretos de verdad (`SUPABASE_SERVICE_ROLE_KEY`, nunca debería llegar al cliente): los OAuth Client IDs son públicos por diseño (van en el bundle de Android), pero igual van en `.env` por consistencia. Ver `docs/runbooks/secrets.md` y `docs/runbooks/google-signin-supabase.md`.
+- **Regla canónica de navegación con `go_router`:** `context.push(...)` para detail/sheet (preserva back stack), `context.go(...)` para tab/sección (reemplaza stack). Decisión documentada en el review de HDU-004 (commit `b88968a`). Para placeholders con back funcional, `push` es lo correcto. Para tabs o secciones que reemplazan la pantalla actual, `go` es lo correcto. La elección se hace pantalla por pantalla según el flujo, no es intercambiable.
 
 **Excepción documentada — carpetas de features/ en español:**
 

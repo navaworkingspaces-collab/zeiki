@@ -246,12 +246,19 @@ class _FakeBiometricService implements BiometricService {
 /// consulta `tier.has(AppFeature.splash)` en `initState` (HDU-006).
 class _FakeTierService implements TierService {
   final Map<AppFeature, bool> flags = <AppFeature, bool>{};
+  // ignore: unused_field
+  final bool debugEnabled;
+
+  // ignore: unused_element_parameter
+  _FakeTierService({this.debugEnabled = false});
 
   @override
   bool has(AppFeature feature) => flags[feature] ?? false;
 
+  /// Match con el real: `debugEnabled || flags.isNotEmpty`.
+  // ignore: unused_element_parameter
   @override
-  bool isCacheLoaded() => flags.isNotEmpty;
+  bool isCacheLoaded() => debugEnabled || flags.isNotEmpty;
 
   @override
   Stream<TierChange> get changes => const Stream<TierChange>.empty();

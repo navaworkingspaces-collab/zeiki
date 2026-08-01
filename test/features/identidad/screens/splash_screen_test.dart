@@ -156,18 +156,33 @@ void main() {
       // La ruta sigue siendo /splash (no navegó a ningún lado).
       expect(router.routerDelegate.currentConfiguration.uri.path, '/splash');
     });
+
+    // NOTA sobre cobertura del `catch (_)` de `_loadAppVersion`:
+    // El happy path está cubierto arriba ("el footer muestra v0.1.0
+    // · Developed by Zeiki Team 14px"). El catch defensivo es difícil
+    // de testear con `package_info_plus` 8.x sin mockear el platform
+    // channel (overhead > valor). Se valida por code review en cada
+    // PR. Si el catch se borra accidentalmente, la app no crashea
+    // (porque `info.version` sería null), pero el footer mostraría
+    // "vnull" en vez de "v?" o "v0.1.0", lo que es detectable en
+    // QA. Para un test más robusto, considerar inyectar un wrapper
+    // de PackageInfo con interfaz (sale en HDU futura si el coverage
+    // gap duele).
   });
 
-  group('SplashScreen — cache cold del TierService (HDU-006 v3)', () {
+  group('SplashScreen — fail-safe del TierService (HDU-006 v3)', () {
     // **Caso de uso:** primera instalación o red caída. El cache del
     // TierService está vacío (no hay keys en el map). El splash debe
     // mostrarse igual (fail-safe "ON por default") porque el splash es
     // branding, no funcionalidad. El usuario debe ver la marca al abrir
-    // la app por primera vez. Si el flag explícitamente está OFF, no
-    // se muestra (eso lo cubre el grupo "feature flag OFF" arriba).
+    // la app por primera vez.
     //
     // NO seteamos `tier.flags[...]` en setUp → el map queda vacío →
     // `isCacheLoaded()` retorna `false` → el splash se muestra.
+    //
+    // El caso "cache loaded + flag OFF" (splash se salta) está cubierto
+    // por el grupo "feature flag OFF (AC2)" más abajo — NO se duplica
+    // aquí (era redundante en HDU-006 v3, limpieza post-merge).
 
     testWidgets('cache cold + sin flag explícito → splash SÍ renderiza '
         'el branding (fail-safe "ON")', (tester) async {
@@ -179,20 +194,6 @@ void main() {
               'mostrar el branding por default (fail-safe ON)');
       expect(find.text('LOADING'), findsOneWidget,
           reason: 'mismo motivo: el "LOADING" es parte del branding');
-    });
-
-    testWidgets('cache cold + flag explícito OFF en Supabase → splash NO '
-        'renderiza el branding (el OFF explícito gana)', (tester) async {
-      // Simula que el refresh ya terminó y trajo `splash = false` desde
-      // Supabase. El cache está cargado (1 key), pero el flag es OFF.
-      tier.flags[AppFeature.splash] = false;
-
-      await pumpSplash(tester);
-
-      expect(find.text('ZEIKI'), findsNothing,
-          reason: 'con cache loaded + flag OFF, el splash se salta');
-      expect(find.text('LOADING'), findsNothing,
-          reason: 'mismo motivo');
     });
   });
 
@@ -268,12 +269,27 @@ void main() {
 /// `TierService` fake con el flag `splash` configurable por test.
 class _FakeTierService implements TierService {
   final Map<AppFeature, bool> flags = <AppFeature, bool>{};
+  // ignore: unused_field
+  final bool debugEnabled;
+
+  // ignore: unused_element_parameter
+  _FakeTierService({this.debugEnabled = false});
 
   @override
   bool has(AppFeature feature) => flags[feature] ?? false;
 
+  /// Match con el real: `debugEnabled || flags.isNotEmpty`. Si un test
+  /// setea `debugEnabled: true` con `flags` vacío, el fake reporta
+  /// "cache loaded" igual que el real.
+  ///
+  /// NOTA: `debugEnabled` no se usa explícitamente en tests hoy (todos
+  /// usan el default `false`), pero está en el constructor para que el
+  /// fake matchee el contrato del real y para que tests futuros que
+  /// necesiten simular debug no necesiten refactor. Ver housekeeping
+  /// de Zeiki (chore/housekeeping-bundle) que documentó este cambio.
+  // ignore: unused_element_parameter
   @override
-  bool isCacheLoaded() => flags.isNotEmpty;
+  bool isCacheLoaded() => debugEnabled || flags.isNotEmpty;
 
   @override
   Stream<TierChange> get changes => const Stream<TierChange>.empty();
