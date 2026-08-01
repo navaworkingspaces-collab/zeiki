@@ -2,16 +2,17 @@
 
 > **Snapshot rápido del estado del proyecto.** Se actualiza en el cleanup (paso 12) de cada HDU cerrada. Para el detalle de una HDU específica, ver `specs/HDU-XXX-*.md`. Para el histórico, ver `.mavis/hdu.md`.
 
-**Última actualización:** 2026-07-31 (post-housekeeping bundle #2, PR #11 mergeado).
+**Última actualización:** 2026-07-31 (post-housekeeping bundle #3, PR #12 mergeado).
 
 ---
 
 ## 📍 Dónde estamos
 
 - **Fase:** 1 (MVP).
-- **Última HDU cerrada:** HDU-006 — Splash nuevo con branding + feature flag.
-- **HDUs activas:** BUG-001 (Google Sign-In no completa el flujo — spec en `specs/BUG-001-google-signin.md`, síntoma confirmado en QA).
-- **Rama `main`:** deployable.
+- **Última unidad cerrada:** Housekeeping bundle #3 — deep link hardening (#14, #15, #16).
+- **HDUs activas:** ninguna.
+- **BUGs activas:** ninguno.
+- **Rama `main`:** deployable (último merge: `68e13ae` — PR #12).
 - **Stack operativo:** Flutter 3.38.3 + Supabase (proyecto Zeiki, región `us-east-2`) + Deno para edge functions.
 - **Proyecto Supabase:** ref `iocbqjzmoneulydmeavr`, URL `https://iocbqjzmoneulydmeavr.supabase.co`. Config en `assets/.env` (en `.gitignore`).
 
@@ -116,9 +117,9 @@
 ## 🔜 Próximos pasos sugeridos (secuencia decidida con Hugo)
 
 - **Decidir la siguiente unidad de trabajo.** Opciones:
-  - **Housekeeping bundle #2:** quedan 14 follow-ups non-blocker (#3, #4, #7, #9, #10, #13, #14, #15, #16, #18, #21, #27 + 1 nuevo que aparezca). Podemos hacer otra ronda corta.
+  - **Housekeeping bundle #4:** quedan 10 follow-ups non-blocker (#3, #4, #7, #9, #10, #13, #18, #27 + 2 nuevos que aparezcan). Podemos hacer otra ronda corta.
   - **HDU-007 / HDU-008 (feature):** próximo paso del feature roadmap (ej. onboarding, fiscal, descarga de CFDIs, etc.).
-  - **Pausa / descanso** — ha sido un día largo, hemos cerrado 7 HDUs + 1 BUG + 1 housekeeping bundle en una sesión.
+  - **Pausa / descanso** — ha sido un día largo, hemos cerrado 7 HDUs + 1 BUG + 3 housekeeping bundles en una sesión.
 
 ## 🐛 Follow-ups activos (de HDUs cerradas)
 
@@ -137,9 +138,9 @@
 | 11 | HDU-003 | `debugPrint` con la excepción en `refresh()` — sanitizar cuando el fetcher reciba más contexto (HDU-005 con auth). | baja | **completado (housekeeping bundle #1)** |
 | 12 | HDU-003 | `_parseFlags` ignora tipos no-bool silenciosamente — loggear con `debugPrint` cuando se ignore un valor. | baja | **completado (housekeeping bundle #2)** |
 | 13 | HDU-003 | CLI `feature_manifest` (Target §15, aspiración) — genera doc auto-generada a partir del enum `AppFeature`. | baja | aspiración (Target §15) |
-| 14 | HDU-004 | Whitelist de hosts válidos para `zeikiUriToPath`. Crece naturalmente con HDU-005/006. | baja | pendiente (HDU futura) |
-| 15 | HDU-004 | Sanitizar `state.uri` en `errorBuilder` del router. Bajo riesgo hoy, escala cuando crezca el número de rutas. | baja | pendiente (HDU futura) |
-| 16 | HDU-004 | Restringir intent filter `zeiki://` a hosts específicos en `AndroidManifest.xml`. Mismo motivo que #14. | baja | pendiente (HDU futura) |
+| 14 | HDU-004 | Whitelist de hosts válidos para `zeikiUriToPath`. Crece naturalmente con HDU-005/006. | baja | **completado (housekeeping bundle #3)** |
+| 15 | HDU-004 | Sanitizar `state.uri` en `errorBuilder` del router. Bajo riesgo hoy, escala cuando crezca el número de rutas. | baja | **completado (housekeeping bundle #3)** |
+| 16 | HDU-004 | Restringir intent filter `zeiki://` a hosts específicos en `AndroidManifest.xml`. Mismo motivo que #14. | baja | **completado (housekeeping bundle #3)** |
 | 17 | HDU-004 | Mover `appRouter` a GetIt como singleton lazy. Necesario cuando llegue HDU-005 (auth con `redirect:`) y `AuthService`. | media | **completado (se hizo en HDU-005, PR #6)** |
 | 18 | HDU-004 | Cobertura del integration test en CI: back nativo + rotación + deep link end-to-end con `adb` automatizados. | baja | pendiente (cuando se configure CI) |
 | 19 | HDU-004 | Regla "push para detail/sheet, go para tab/sección" — documentar como patrón canónico cuando haya más navegación. | baja | **completado (housekeeping bundle #1)** |
@@ -161,3 +162,17 @@
 - **2026-07-29 — "Si los planos lo dicen, no se pregunta, se hace":** el spec de HDU-001 omitió `lib/core/tiers/`, pero Target §6 y ADR-010 la mencionan. No se pregunta al usuario, se corrige el spec y se crea la carpeta. Lección completa en `memory/MEMORY.md` (agente).
 - **2026-07-29 — "Lo que el auditor marca, se hace":** las 5 notas del `zeiki-auditor` no se "registran como follow-up", se aplican en el momento (o se descartan con razón explícita). 2 aplicadas en este cleanup, 2 registradas como aprendizaje, 1 zona gris documentada en `conventions.md`.
 - **2026-07-29 — "El legacy es referencia, no verdad":** la HDU-EXPLORE-001 reportó que el bug del cortado "ya estaba arreglado en el legacy". Eso es lo que el código legacy DICE, no es verdad verificada. **Lección:** tratar el legacy como referencia, no como fuente de verdad. Lo que el legacy afirma sobre sus propios bugs debe verificarse antes de aceptarlo como base.
+
+## 🧹 Housekeeping bundle #3 — deep link hardening (2026-07-31)
+
+- **Tipo:** chore (bundle chico defensivo)
+- **PR:** [#12](https://github.com/navaworkingspaces-collab/zeiki/pull/12) — mergeado a `main` (commit `68e13ae`)
+- **Cambios (3 fixes relacionados con deep links):**
+  1. **#14** Whitelist de hosts válidos en `zeikiUriToPath` (`_allowedDeepLinkHosts` con 6 hosts: splash, onboarding, login, register, unlock, home). Host fuera del whitelist → `debugPrint` + return `null`. Antes aceptaba cualquier host (`zeiki://admin`).
+  2. **#15** Nuevo helper `sanitizeUriForDisplay(uri, maxLength: 50)` usado en el `errorBuilder` del router. Trunca a 50 chars. Antes mostraba `state.uri.toString()` directo, filtrando query params arbitrarios.
+  3. **#16** `AndroidManifest.xml`: intent filter declara 6 `<data android:host="..." />` explícitos en vez de un `<data android:scheme="zeiki" />` genérico. Defensa en profundidad: el SO no muestra Zeiki en el chooser para hosts no whitelisted.
+- **Pipeline final:** `flutter analyze` 0, `flutter test` **191/191** verde (era 182, +9 tests: 5 en `zeikiUriToPath`, 1 en `wireDeepLinks`, 3 en `sanitizeUriForDisplay`).
+- **QA en device real:** no requerida. Los 3 cambios son hardening defensivo — el comportamiento observable para el usuario en flujos válidos es idéntico.
+- **Backlog:** 13 → 10 follow-ups activos. 0 HDUs activas, 0 BUGs activas, 0 PRs abiertos, 0 crons. `main` deployable.
+- **Regla de mantenimiento (3 lugares deben mantenerse en sync):** `AppRoute` enum en `app_router.dart`, `_allowedDeepLinkHosts` en `app_links_handler.dart`, `<data android:host="..." />` en `AndroidManifest.xml`. Si agregas un valor a `AppRoute`, agrega el host en los otros 2 lugares. Los tests documentan el contrato.
+- **Lección:** "defensa en profundidad" no es paranoia. El whitelist (#14) + el manifest (#16) + el sanitize (#15) son 3 capas que reducen la superficie de ataque. Si una falla, las otras 2 siguen protegiendo.
