@@ -195,6 +195,16 @@ class TierService {
       final value = flags[feature.name];
       if (value is bool) {
         result[feature] = value;
+      } else if (value != null) {
+        // El valor existe pero NO es bool (string, int, etc.). Lo
+        // ignoramos silenciosamente antes — eso es un footgun: si
+        // alguien en el dashboard pone un valor mal, no nos enteramos.
+        // Ahora loggeamos para que sea detectable en debug. Sigue
+        // siendo "ignorar" (no crashear) porque la feature default
+        // es `false` y eso es lo que el código asume.
+        debugPrint('TierService._parseFlags: ignored non-bool value '
+            'for feature "${feature.name}": '
+            'value=${value.runtimeType} value="$value"');
       }
     }
     return result;
