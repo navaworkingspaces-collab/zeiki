@@ -166,8 +166,28 @@ class AuthService {
 
   /// Cierra la sesión actual. Idempotente (Supabase maneja re-signOut
   /// sin error).
+  ///
+  /// **También desloguea de Google** (`googleSignIn.signOut()`) si el
+  /// handler de Google está presente. Sin esto, el chooser de Google
+  /// seguiría "recordando" la cuenta del user después del signOut, y
+  /// el siguiente signIn con Google la usaría sin re-pedir credenciales.
+  /// El user esperaría que signOut limpie TODO el estado de auth, no
+  /// solo la sesión de Supabase.
+  ///
+  /// El `googleSignIn.signOut()` se ejecuta best-effort: si falla (ej.
+  /// Play Services caído), NO bloquea el signOut de Supabase.
   Future<void> signOut() async {
     await _signOutFn();
+    // Desloguear de Google también. El handler es opcional (puede ser
+    // null en tests que no necesitan Google), por eso el `?.`.
+    try {
+      await _googleSignInHandler?.signOutAndDisconnect();
+    } catch (_) {
+      // Best-effort. Si falla, el signOut de Supabase ya cerró la
+      // sesión. El user verá /login. La próxima vez que intente
+      // Google, Play Services puede que aún recuerde la cuenta —
+      // aceptable para un signOut parcial.
+    }
   }
 
   /// Devuelve la sesión activa o `null`. Se llama desde el `redirect`

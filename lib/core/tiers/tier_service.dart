@@ -163,7 +163,12 @@ class TierService {
       _applyRemoteUpdate(newFlags);
     } catch (e, st) {
       // AC5: NO romper la UI. Loguear y conservar cache.
-      debugPrint('TierService: refresh failed, keeping previous cache: $e');
+      // Sanitizado: NO loggeamos la excepción completa (puede contener
+      // URLs, headers, o info de Supabase). Solo el tipo y un mensaje
+      // genérico. El error completo va al `addError` de abajo, que
+      // listeners pueden consumir.
+      debugPrint('TierService: refresh failed (${e.runtimeType}) — '
+          'keeping previous cache');
       // `addError` para que listeners que quieran reaccionar a fallos
       // puedan hacerlo. Por ahora nadie lo usa.
       // Guard: si `dispose()` se llamó mientras el fetcher esperaba,
