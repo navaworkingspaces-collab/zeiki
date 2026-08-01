@@ -17,16 +17,54 @@
 import 'dart:async';
 
 import 'package:app_links/app_links.dart';
+import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
 
+/// Hosts válidos de deep link `zeiki://<host>` (Housekeeping bundle #3,
+/// fix #14). Cualquier host fuera de este set se ignora silenciosamente
+/// y se loggea con `debugPrint`.
+///
+/// **Por qué existe:** antes, `zeikiUriToPath` aceptaba CUALQUIER host
+/// (`zeiki://admin`, `zeiki://../etc`), lo que permitía que un intent
+/// externo navegara a rutas no declaradas (o que el `errorBuilder`
+/// mostrara basura al usuario). El whitelist limita la superficie de
+/// ataque y mantiene el contrato en sync con el enum `AppRoute` de
+/// `app_router.dart`.
+///
+/// **Regla de mantenimiento:** si agregas un valor a `AppRoute` en
+/// `app_router.dart`, agrega el host correspondiente aquí. El test en
+/// `app_links_handler_test.dart` documenta el contrato.
+const _allowedDeepLinkHosts = <String>{
+  'splash',
+  'onboarding',
+  'login',
+  'register',
+  'unlock',
+  'home',
+};
+
 /// Traduce una URI de deep link `zeiki://<host>` al path interno
-/// `/<host>`. Devuelve `null` si la URI no es del esquema `zeiki` o
-/// si el host está vacío — el caller decide qué hacer (típicamente:
+/// `/<host>`. Devuelve `null` si la URI no es del esquema `zeiki`, si
+/// el host está vacío, o si el host no está en el whitelist
+/// `_allowedDeepLinkHosts` — el caller decide qué hacer (típicamente:
 /// ignorar).
+///
+/// **Defensa en profundidad (bundle #3, fix #14):** un intent
+/// `zeiki://admin` (host no whitelisted) NO navega a `/admin`, aunque
+/// la app esté construida con un router permisivo. Esto reduce la
+/// superficie de ataque si en el futuro se agregan rutas
+/// privilegiadas (ej. `/admin`, `/debug`).
 String? zeikiUriToPath(Uri uri) {
   if (uri.scheme != 'zeiki') return null;
   final host = uri.host;
   if (host.isEmpty) return null;
+  if (!_allowedDeepLinkHosts.contains(host)) {
+    debugPrint(
+      'zeikiUriToPath: host rechazado por whitelist: "$host" '
+      '(uri=$uri)',
+    );
+    return null;
+  }
   return '/$host';
 }
 

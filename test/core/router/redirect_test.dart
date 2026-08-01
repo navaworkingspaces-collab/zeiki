@@ -208,4 +208,32 @@ void main() {
       );
     });
   });
+
+  // Housekeeping bundle #3, fix #15: el `errorBuilder` ahora muestra
+  // la URI sanitizada para evitar filtrar query params largos o
+  // basura visual. Verificamos el helper directamente.
+  group('sanitizeUriForDisplay', () {
+    test('URI corta → se devuelve tal cual', () {
+      expect(
+        sanitizeUriForDisplay(Uri.parse('zeiki://login')),
+        'zeiki://login',
+      );
+    });
+
+    test('URI larga (>= maxLength) → se trunca con ...', () {
+      // Forzamos maxLength pequeño para verificar el truncado.
+      final longUri = Uri.parse(
+        'zeiki://login?token=eyJhbGciOiJIUzI1NiJ9.payload.signature',
+      );
+      final result = sanitizeUriForDisplay(longUri, maxLength: 20);
+      expect(result.length, lessThanOrEqualTo(23)); // 20 + '...'
+      expect(result, endsWith('...'));
+    });
+
+    test('maxLength por default (50) cubre paths razonables', () {
+      final result = sanitizeUriForDisplay(Uri.parse('zeiki://home'));
+      // Sin truncar, devuelve el toString completo.
+      expect(result, 'zeiki://home');
+    });
+  });
 }

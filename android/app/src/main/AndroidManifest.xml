@@ -37,12 +37,26 @@
                  (HTTPS + assetlinks.json) — es scheme custom, deliberadamente
                  simple para MVP. Cuando se quiera abrir directo sin picker,
                  migrar a `https://zeiki.app/<ruta>` y agregar `assetlinks.json`
-                 (spec HDU-004 §Riesgos). -->
+                 (spec HDU-004 §Riesgos).
+
+                 Housekeeping bundle #3, fix #16: restringimos los hosts
+                 válidos. Antes aceptaba CUALQUIER `zeiki://*`; ahora solo
+                 los 6 hosts whitelisted que corresponden a rutas reales
+                 (mantener en sync con `AppRoute` en app_router.dart y
+                 `_allowedDeepLinkHosts` en app_links_handler.dart).
+                 Defensa en profundidad: si un intent externo intenta
+                 abrir `zeiki://admin`, el SO no muestra Zeiki en el
+                 chooser, así que ni siquiera llega al plugin. -->
             <intent-filter android:autoVerify="false">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="zeiki" />
+                <data android:scheme="zeiki" android:host="splash" />
+                <data android:scheme="zeiki" android:host="onboarding" />
+                <data android:scheme="zeiki" android:host="login" />
+                <data android:scheme="zeiki" android:host="register" />
+                <data android:scheme="zeiki" android:host="unlock" />
+                <data android:scheme="zeiki" android:host="home" />
             </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.

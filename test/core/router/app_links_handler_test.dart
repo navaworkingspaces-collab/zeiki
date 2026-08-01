@@ -42,6 +42,36 @@ void main() {
     test('https://... → null (ignorar, no es esquema zeiki)', () {
       expect(zeikiUriToPath(Uri.parse('https://example.com/home')), isNull);
     });
+
+    // Housekeeping bundle #3, fix #14: whitelist de hosts válidos.
+    // Antes, `zeikiUriToPath` aceptaba CUALQUIER host (incluso
+    // `zeiki://admin`). Ahora solo los 6 hosts declarados en
+    // `_allowedDeepLinkHosts` (mantener en sync con `AppRoute` en
+    // `app_router.dart` y con los `<data android:host="..." />` del
+    // `AndroidManifest.xml`).
+    test('zeiki://admin → null (whitelist: host no permitido)', () {
+      expect(zeikiUriToPath(Uri.parse('zeiki://admin')), isNull);
+    });
+
+    test('zeiki://settings → null (whitelist: host no permitido)', () {
+      expect(zeikiUriToPath(Uri.parse('zeiki://settings')), isNull);
+    });
+
+    test('zeiki://../etc → null (whitelist: host no permitido)', () {
+      // Caso de path-traversal clásico: aunque el router no navegue
+      // a `/../etc`, el host no está whitelisted y se rechaza antes.
+      expect(zeikiUriToPath(Uri.parse('zeiki://../etc')), isNull);
+    });
+
+    test('zeiki://register → /register (whitelist: nuevo host bundle 1)', () {
+      // Cubre el host agregado por HDU-005.
+      expect(zeikiUriToPath(Uri.parse('zeiki://register')), '/register');
+    });
+
+    test('zeiki://unlock → /unlock (whitelist: host HDU-005b)', () {
+      // Cubre el host agregado por HDU-005b.
+      expect(zeikiUriToPath(Uri.parse('zeiki://unlock')), '/unlock');
+    });
   });
 
   group('wireDeepLinks', () {
@@ -105,6 +135,28 @@ void main() {
 
       // Una URI de otro scheme (ej. https) no debe navegar.
       controller.add(Uri.parse('https://example.com/home'));
+      await tester.pumpAndSettle();
+
+      expect(router.routerDelegate.currentConfiguration.uri.path, '/start');
+    });
+
+    // Housekeeping bundle #3, fix #14: aunque la URI sea del esquema
+    // correcto, un host fuera del whitelist NO debe navegar.
+    testWidgets('ignores zeiki://<host> con host no whitelisted',
+        (tester) async {
+      final controller = StreamController<Uri>.broadcast();
+      addTearDown(controller.close);
+
+      await tester.pumpWidget(
+        MaterialApp.router(routerConfig: router),
+      );
+
+      wireDeepLinks(router, controller.stream);
+      await tester.pump();
+
+      // `zeiki://admin` es del esquema correcto pero el host no
+      // está whitelisted → no navega.
+      controller.add(Uri.parse('zeiki://admin'));
       await tester.pumpAndSettle();
 
       expect(router.routerDelegate.currentConfiguration.uri.path, '/start');
