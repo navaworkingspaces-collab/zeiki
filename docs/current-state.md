@@ -2,7 +2,7 @@
 
 > **Snapshot rápido del estado del proyecto.** Se actualiza en el cleanup (paso 12) de cada HDU cerrada. Para el detalle de una HDU específica, ver `specs/HDU-XXX-*.md`. Para el histórico, ver `.mavis/hdu.md`.
 
-**Última actualización:** 2026-07-31 (post-HDU-006 cerrada, BUG-001 abierta).
+**Última actualización:** 2026-07-31 (post-housekeeping bundle #2, PR #11 mergeado).
 
 ---
 
@@ -135,16 +135,16 @@
 | 9 | HDU-003 | Helper `registerLazySingletonIfNotRegistered<T>(factory)` para no repetir el patrón en futuros servicios (`AuthService`, `BiometricService`, etc.). | baja | pendiente (HDU futura) |
 | 10 | HDU-003 | Conectar `tier_service_config.refreshInterval` con `Timer.periodic` cuando llegue la HDU de refresh automático. | baja | pendiente (HDU futura) |
 | 11 | HDU-003 | `debugPrint` con la excepción en `refresh()` — sanitizar cuando el fetcher reciba más contexto (HDU-005 con auth). | baja | **completado (housekeeping bundle #1)** |
-| 12 | HDU-003 | `_parseFlags` ignora tipos no-bool silenciosamente — loggear con `debugPrint` cuando se ignore un valor. | baja | pendiente (HDU futura) |
+| 12 | HDU-003 | `_parseFlags` ignora tipos no-bool silenciosamente — loggear con `debugPrint` cuando se ignore un valor. | baja | **completado (housekeeping bundle #2)** |
 | 13 | HDU-003 | CLI `feature_manifest` (Target §15, aspiración) — genera doc auto-generada a partir del enum `AppFeature`. | baja | aspiración (Target §15) |
 | 14 | HDU-004 | Whitelist de hosts válidos para `zeikiUriToPath`. Crece naturalmente con HDU-005/006. | baja | pendiente (HDU futura) |
 | 15 | HDU-004 | Sanitizar `state.uri` en `errorBuilder` del router. Bajo riesgo hoy, escala cuando crezca el número de rutas. | baja | pendiente (HDU futura) |
 | 16 | HDU-004 | Restringir intent filter `zeiki://` a hosts específicos en `AndroidManifest.xml`. Mismo motivo que #14. | baja | pendiente (HDU futura) |
-| 17 | HDU-004 | Mover `appRouter` a GetIt como singleton lazy. Necesario cuando llegue HDU-005 (auth con `redirect:`) y `AuthService`. | media | bloqueante para HDU-005 (decidir si en esta HDU o aparte) |
+| 17 | HDU-004 | Mover `appRouter` a GetIt como singleton lazy. Necesario cuando llegue HDU-005 (auth con `redirect:`) y `AuthService`. | media | **completado (se hizo en HDU-005, PR #6)** |
 | 18 | HDU-004 | Cobertura del integration test en CI: back nativo + rotación + deep link end-to-end con `adb` automatizados. | baja | pendiente (cuando se configure CI) |
 | 19 | HDU-004 | Regla "push para detail/sheet, go para tab/sección" — documentar como patrón canónico cuando haya más navegación. | baja | **completado (housekeeping bundle #1)** |
 | 20 | HDU-004 | `android:label="zeiki"` en minúsculas (debería ser "Zeiki" con Z mayúscula). Pre-existente a HDU-001. | baja | **completado (housekeeping bundle #1)** |
-| 21 | HDU-004 | Renombrar test de "rotación" a "router conserva ruta tras rebuild" — el nombre actual es engañoso. | baja | chore (HDU corta) |
+| 21 | HDU-004 | Renombrar test de "rotación" a "router conserva ruta tras rebuild" — el nombre actual es engañoso. | baja | **obsoleto** (el test nunca se llamó "rotación", ya era "state restoration está habilitado (AC7)" en `widget_test.dart:148`) |
 | 22 | **HDU-005** | **BUG:** Google Sign-In no completa el flujo — selector de cuenta aparece, seleccionar cuenta → no pasa nada. Detectado en QA post-HDU-006 (no en test). 113/113 tests + 3 rondas de review no lo cacharon. | **alta** | **completado (BUG-001 cerrada, PR #9)** |
 | 23 | HDU-006 | Redundancia entre grupos "cache cold" y "feature flag OFF" en `splash_screen_test.dart`. | baja | **completado (housekeeping bundle #1)** |
 | 24 | HDU-006 | Nit de naming en el grupo "cache cold" (un test no es realmente cold porque setea un flag). | baja | **completado (housekeeping bundle #1)** |
