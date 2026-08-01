@@ -79,6 +79,8 @@ Después de leer esos 5:
 
 - **Mavis orquesta, no implementa.** La implementación la hace una sesión de `zeiki-implementer` en background.
 - **HDU-EXPLORE previa** (plantilla en `docs/templates/hdu-explore.md`) cuando una HDU toca un sistema externo (SAT, Facturama, código legacy, etc.).
+- **QA en device real (Xiaomi 2203129G) detecta bugs que los tests NO.** Aplicar siempre que la HDU toque OAuth / push / deep links / biometría nativa / pagos. Lecciones: BUG-001 (Google Sign-In mockeado en tests, bug en runtime).
+- **Trampa conocida de `google_sign_in` + Play Services:** el chooser de cuenta SÍ aparece la **primera vez** que el user hace signIn en el app. Las siguientes veces Play Services "recuerda" la cuenta y la usa directo (UX optimizado, NO bug). Si necesitas forzar el chooser para QA, ver `docs/runbooks/google-signin-supabase.md` (sección Troubleshooting).
 - **Workflow de 12 pasos:** spec → branch → test red → implement → test green → review (3 gates) → pipeline → **QA local en device real (Xiaomi 2203129G)** → commit → PR → cleanup. **El QA local requiere instalar el APK en el Xiaomi y hacer smoke test manual del flujo crítico**, NO solo correr la suite de tests automatizados. Para HDUs sin integración externa (ej. refactor, chore) puede bastar con los tests automatizados, pero para HDUs con OAuth / push / deep links / biometría nativa / pagos / cualquier sistema externo, el QA en device real es BLOQUEANTE.
 - **Review en 3 gates:** `zeiki-reviewer` valida clean code + security + architecture. `zeiki-auditor` valida minimalismo y relevancia.
 - **Definition of Done** del workflow es la checklist de cierre.
