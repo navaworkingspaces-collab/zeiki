@@ -133,6 +133,7 @@ Si el popup no aparece o falla:
 | `ApiException: 10` | `google-services.json` falta o está mal | (HDU futura: agregar Firebase) |
 | `PlatformException(sign_in_failed)` | SHA-1 no coincide | Regenerar SHA-1 con `signingReport` |
 | Pantalla blanca tras popup | Supabase devuelve 400 — secret inválido | Paso 3, verificar Client Secret |
+| **Chooser NO aparece** en signIns subsecuentes (después del primero) | **Comportamiento normal** de `google_sign_in` + Google Play Services. Después del primer signIn exitoso, Play Services "recuerda" la cuenta para este app y la usa directo, sin chooser. UX optimizado, NO es bug. | Solo necesitas el chooser para QA/debug si quieres cambiar de cuenta. Opciones: (a) agregar `await googleSignIn.signOut()` antes del `signIn()` (debug only, NO commitear); (b) `adb shell pm clear com.google.android.gms` (limpia cache de Play Services, fuerte); (c) desinstalar + reinstalar la app. El `AuthService.signOut()` actual solo desloguea de Supabase, no de Google — son sistemas independientes. |
 
 ---
 
