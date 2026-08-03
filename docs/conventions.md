@@ -2,7 +2,7 @@
 
 > **Reglas permanentes del proyecto.** Este documento describe **qué** debe cumplir el código, no **cómo** se hace. El "cómo" vive en `workflow.md` y `git.md`. Si las convenciones cambian, este archivo cambia poco; si el stack cambia, este archivo no se reescribe.
 >
-> **Última actualización:** 2026-07-29 (v4 — frase de propósito, qué NO documentamos, errores, APIs, config, dependencias)
+> **Última actualización:** 2026-08-03 (v5 — política de cuándo actualizar deps: triggers HARD/SOFT, anti-patrón "pendiente rutinario"; cierre del follow-up #3)
 
 ---
 
@@ -399,6 +399,41 @@ Si la respuesta a las 4 es "no, sí, sí, no" — busca una alternativa. Si desp
 - **Las deps se declaran con versión exacta o rango conservador**, no "cualquier versión mayor".
 - **Si una dep se abandona, se busca reemplazo antes de que rompa** el build.
 - **Las deps de testing se separan** de las deps de runtime cuando el stack lo permite.
+
+### Cuándo actualizar una dep (triggers)
+
+> **Política (agregada 2026-08-03, post-bundle #5 part 1):** las deps se actualizan **solo cuando hay un trigger concreto**, NO en revisión periódica. Esto evita el anti-patrón de "pendiente rutinario que se arrastra sin motivo".
+
+**Triggers HARD (obligatorio, no se discute):**
+
+1. **CVE de seguridad publicado** que afecte a la versión actual. Rotación inmediata. Owner: el que detecta.
+2. **Stack upgrade fuerza incompatibilidad** (ej. nueva versión de Flutter requiere Dart 3.12, y la dep X no soporta Dart 3.12). Se actualiza la dep en el mismo PR del stack upgrade.
+3. **Una HDU/feature nueva necesita una API específica** de la versión mayor disponible. Se actualiza solo esa dep, en su HDU, con su plan.
+
+**Triggers SOFT (recomendado, no obligatorio):**
+
+4. **La versión actual ya no recibe parches** del autor (deprecation announced, repo archivado, último release > 2 años). Plan: actualizar en la siguiente HDU que toque el área afectada.
+5. **Compatibilidad con el resto del stack degradada** (ej. otra dep subió y ahora hay conflicto de versiones). Plan: resolver el conflicto en el siguiente bundle de housekeeping.
+
+**NO son triggers válidos:**
+
+- ❌ "Hay 9 paquetes con updates disponibles" (sin motivo concreto).
+- ❌ "Es buena práctica estar actualizado" (es trabajo sin valor de producto).
+- ❌ "El review de la HDU-X sugirió actualizar" (la sugerencia se evalúa; si no hay trigger, no se hace).
+- ❌ "Pasaron X meses desde la última actualización" (no hay calendario).
+
+### Anti-patrón: "pendiente rutinario"
+
+**NO** se listan las deps outdated como follow-up de housekeeping. Si `flutter pub outdated` muestra 9 paquetes con updates, eso **no es un pendiente**. Las deps funcionan, no hay CVE, no urge. El día que haya un trigger (de los 5 de arriba), se actúa.
+
+**Implicación operacional para Mavis (orquestador):**
+
+- **NO** escanear `flutter pub outdated` en cada housekeeping bundle.
+- **NO** proponer bumps "preventivos" sin trigger.
+- **SÍ** reportar inmediatamente si detecta un CVE conocido.
+- **SÍ** verificar deps cuando (a) Mavis planea una HDU que necesita feature nueva, (b) Mavis hace un stack upgrade de Flutter/Dart, (c) el usuario pregunta explícitamente por deps.
+
+**El follow-up #3 de HDU-001** ("27 paquetes con updates disponibles") se cerró bajo esta política. Si más adelante hay trigger, se abre una HDU dedicada para el bump específico que el trigger justifique.
 
 ---
 
