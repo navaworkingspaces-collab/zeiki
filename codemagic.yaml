@@ -1,0 +1,58 @@
+# Code Magic CI/CD config para Zeiki (ADR-006).
+#
+# Este archivo define el pipeline de verificación automatizada.
+# Por ahora solo corre `flutter analyze` + `flutter test` en cada push
+# a main y en cada PR. Es el setup mínimo de #18 (follow-up de HDU-001).
+#
+# **Filosofía:** este YAML es la versión versionada de la "config de CI".
+# NO configures pasos en la UI de Code Magic; si necesitas cambiar algo,
+# edita este archivo y haz commit. Así el setup es reproducible desde cero
+# (ADR-006 §"Configuración reproducible").
+#
+# **Triggers:** push a main + pull_request. NO se deploya nada todavía —
+# el workflow solo verifica. El deploy a Firebase App Distribution sale
+# en un workflow separado cuando llegue el momento (housekeeping futuro).
+#
+# **Versión de Flutter:** `stable` para que se mantenga actualizado
+# automáticamente. Si en el futuro queremos fijar versión (reproducibilidad
+# estricta), cambiar a `flutter: 3.38.3` o la versión que se decida.
+#
+# **Secrets:** este workflow NO usa secrets. Los tests unitarios no tocan
+# Supabase ni OAuth — solo verifican el código Dart. Los integration tests
+# (que SÍ tocan Supabase) salen en un workflow separado con sus propios
+# secrets (`SUPABASE_URL`, `SUPABASE_ANON_KEY` en Environment Variables).
+#
+# **Cómo agregar steps después** (ej. cuando llegue el deploy a Firebase):
+# 1. Crear un segundo workflow (`deploy`).
+# 2. Apuntar el trigger solo a `push` en `main` (no a PRs).
+# 3. Agregar el step de build APK + upload a Firebase.
+# 4. Documentar los secrets necesarios en el runbook.
+
+workflows:
+  test:
+    name: Test (analyze + unit tests)
+    max_build_duration: 15
+    triggering:
+      events:
+        - push
+        - pull_request
+      branch_patterns:
+        - pattern: '*'
+          include: true
+          source: true
+    environment:
+      flutter: stable
+    scripts:
+      - name: Get Flutter dependencies
+        script: flutter pub get
+        show_command: true
+      - name: Analyze code
+        script: flutter analyze --no-fatal-warnings
+        show_command: true
+      - name: Run unit tests
+        script: flutter test --reporter compact
+        show_command: true
+    cache:
+      cache_paths:
+        - ~/.pub-cache
+        - .dart_tool

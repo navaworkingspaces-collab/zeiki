@@ -349,7 +349,7 @@ Las Edge Functions se deployan con **Supabase CLI** (no con Code Magic, que solo
 - **Automático en CI:** Code Magic corre `supabase functions deploy` después del build de la app si hay cambios en `supabase/functions/`.
 - **Secrets de la función:** se configuran con `supabase secrets set KEY=value` (queda en Supabase, no en el repo).
 
-**Status:** TBD. El `codemagic.yaml` aún no incluye el paso de deploy de functions.
+**Status:** Parcial. El `codemagic.yaml` ya tiene el workflow `test` (analyze + unit tests) creado en PR #16 (housekeeping #18 part 1). El deploy de edge functions sale en una HDU dedicada cuando llegue (sigue TBD). Runbook: `docs/runbooks/codemagic-setup.md`.
 
 ---
 
