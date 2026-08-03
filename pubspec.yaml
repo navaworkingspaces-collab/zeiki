@@ -74,7 +74,15 @@ dependencies:
   # `PlatformDispatcher.applicationVersion` porque no existe en Flutter 3.38.3
   # (probado: el getter no está definido). El reviewer HDU-006 v1 sugirió esa
   # API pero está mal para esta versión de Flutter.
-  package_info_plus: ^8.0.2
+  #
+  # Subido de `^8.0.2` a `^9.0.1` en housekeeping bundle #5 (follow-up #3,
+  # primera dep de 9 con update). 10.x requiere Flutter >= 3.41.6 y el
+  # proyecto está en 3.38.3, así que 9.x es el techo. Próximo bump sale
+  # cuando se suba Flutter. 9.0.0 documenta requerir AGP >= 8.12.1; el
+  # proyecto tiene 8.11.1 y aun así compila (build APK debug verde) —
+  # posiblemente porque la constraint real es para consumidores que
+  # usen `buildSignature` con SHA-256, lo cual no hacemos.
+  package_info_plus: ^9.0.1
 
 dev_dependencies:
   flutter_test:
