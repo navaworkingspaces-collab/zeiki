@@ -2,17 +2,17 @@
 
 > **Snapshot rápido del estado del proyecto.** Se actualiza en el cleanup (paso 12) de cada HDU cerrada. Para el detalle de una HDU específica, ver `specs/HDU-XXX-*.md`. Para el histórico, ver `.mavis/hdu.md`.
 
-**Última actualización:** 2026-07-31 (post-housekeeping bundle #4 — pendiente de merge).
+**Última actualización:** 2026-07-31 (post-housekeeping bundle #4, PR #13 mergeado).
 
 ---
 
 ## 📍 Dónde estamos
 
 - **Fase:** 1 (MVP).
-- **Última unidad cerrada:** Housekeeping bundle #3 — deep link hardening (#14, #15, #16).
+- **Última unidad cerrada:** Housekeeping bundle #4 — quick wins (#4, #7, #9, #27).
 - **HDUs activas:** ninguna.
 - **BUGs activas:** ninguno.
-- **Rama `main`:** deployable (último merge: `68e13ae` — PR #12).
+- **Rama `main`:** deployable (último merge: `81cf154` — PR #13).
 - **Stack operativo:** Flutter 3.38.3 + Supabase (proyecto Zeiki, región `us-east-2`) + Deno para edge functions.
 - **Proyecto Supabase:** ref `iocbqjzmoneulydmeavr`, URL `https://iocbqjzmoneulydmeavr.supabase.co`. Config en `assets/.env` (en `.gitignore`).
 
@@ -176,3 +176,19 @@
 - **Backlog:** 13 → 10 follow-ups activos. 0 HDUs activas, 0 BUGs activas, 0 PRs abiertos, 0 crons. `main` deployable.
 - **Regla de mantenimiento (3 lugares deben mantenerse en sync):** `AppRoute` enum en `app_router.dart`, `_allowedDeepLinkHosts` en `app_links_handler.dart`, `<data android:host="..." />` en `AndroidManifest.xml`. Si agregas un valor a `AppRoute`, agrega el host en los otros 2 lugares. Los tests documentan el contrato.
 - **Lección:** "defensa en profundidad" no es paranoia. El whitelist (#14) + el manifest (#16) + el sanitize (#15) son 3 capas que reducen la superficie de ataque. Si una falla, las otras 2 siguen protegiendo.
+
+## 🧹 Housekeeping bundle #4 — quick wins (2026-07-31)
+
+- **Tipo:** chore (bundle chico mixto)
+- **PR:** [#13](https://github.com/navaworkingspaces-collab/zeiki/pull/13) — mergeado a `main` (commit `81cf154`)
+- **Cambios (4 follow-ups):**
+  1. **#9** Helper `registerLazySingletonIfNotRegistered<T>(factory)` en `service_locator.dart`. Centraliza el patrón idempotente `if (!getIt.isRegistered<T>()) { getIt.registerLazySingleton<T>(...); }` que se repetía 4 veces. -16 líneas netas. 3 tests nuevos.
+  2. **#4** Doc `--dart-define-from-file` en `secrets.md` (sección "Inyección de variables en build (CI)") + bloque "DOS MODOS DE USO" en `assets/.env.example`. Diferencia dev vs CI + comando exacto.
+  3. **#7** Observation cerrada: `service_role` + `--no-verify-jwt` ya documentado en `secrets.md` + spec. Se cierra con nota "revisar cuando se agreguen flags por usuario".
+  4. **#27** Observation cerrada: wrapper de `package_info_plus` sigue con 1 callsite (`splash_screen.dart`). Se cierra con nota "extraer cuando aparezca 2º callsite".
+- **Pipeline final:** `flutter analyze` 0, `flutter test` **194/194** verde (era 191, +3 del helper #9).
+- **QA en device real:** no requerida. Sin cambios de comportamiento observables.
+- **Backlog:** 10 → 6 follow-ups activos. 0 HDUs activas, 0 BUGs activas, 0 PRs abiertos, 0 crons. `main` deployable.
+- **Notas:**
+  - El bundle #4 es el primero con un refactor de código (#9) que toca la infraestructura de DI. El comportamiento es idéntico (cubierto por el test de idempotencia existente + 3 tests nuevos del helper).
+  - Los 6 que quedan son más "duros": #3 (deps update riesgoso), #10 (refresh interval es feature, no chore), #13 (CLI feature_manifest aspiración), #18 (CI/CD grande). El próximo bundle tendrá menos quick wins, así que vale la pena pensar en HDUs de feature.
