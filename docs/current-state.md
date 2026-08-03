@@ -2,7 +2,7 @@
 
 > **Snapshot rápido del estado del proyecto.** Se actualiza en el cleanup (paso 12) de cada HDU cerrada. Para el detalle de una HDU específica, ver `specs/HDU-XXX-*.md`. Para el histórico, ver `.mavis/hdu.md`.
 
-**Última actualización:** 2026-07-31 (post-housekeeping bundle #3, PR #12 mergeado).
+**Última actualización:** 2026-07-31 (post-housekeeping bundle #4 — pendiente de merge).
 
 ---
 
@@ -117,9 +117,9 @@
 ## 🔜 Próximos pasos sugeridos (secuencia decidida con Hugo)
 
 - **Decidir la siguiente unidad de trabajo.** Opciones:
-  - **Housekeeping bundle #4:** quedan 10 follow-ups non-blocker (#3, #4, #7, #9, #10, #13, #18, #27 + 2 nuevos que aparezcan). Podemos hacer otra ronda corta.
+  - **Housekeeping bundle #5:** quedan 6 follow-ups non-blocker (#3, #10, #13, #18 + 2 nuevos que aparezcan). Los 4 que quedan son refactors medianos (#3 deps, #10 refresh, #13 CLI, #18 CI/CD) o aspiracionales; menos quick wins que el #4.
   - **HDU-007 / HDU-008 (feature):** próximo paso del feature roadmap (ej. onboarding, fiscal, descarga de CFDIs, etc.).
-  - **Pausa / descanso** — ha sido un día largo, hemos cerrado 7 HDUs + 1 BUG + 3 housekeeping bundles en una sesión.
+  - **Pausa / descanso** — ha sido un día largo, hemos cerrado 7 HDUs + 1 BUG + 4 housekeeping bundles en una sesión.
 
 ## 🐛 Follow-ups activos (de HDUs cerradas)
 
@@ -127,13 +127,13 @@
 |---|--------|-------------|-----------|--------|
 | 1 | HDU-001 | `zeiki-reviewer` creado (code review 3 gates). | media | **completado** |
 | 2 | HDU-001 | Si vuelven a salir warnings de Gradle Java 8, abrir HDU para subir target a Java 11/17. | baja | watch (no se reprodujeron) |
-| 3 | HDU-001 | 27 paquetes de `pub get` con updates disponibles. NO actualizar a ciegas — HDU dedicada de "actualizar deps base" cuando se decida. | baja | pendiente |
-| 4 | HDU-001 | Documentar `assets/.env.example` no se incluye como asset cuando se conecte Supabase (usar `--dart-define-from-file`). | media | en próxima HDU de Identidad |
+| 3 | HDU-001 | 27 paquetes de `pub get` con updates disponibles. NO actualizar a ciegas — HDU dedicada de "actualizar deps base" cuando se decida. | baja | pendiente (HDU dedicada, riesgoso) |
+| 4 | HDU-001 | Documentar `assets/.env.example` no se incluye como asset cuando se conecte Supabase (usar `--dart-define-from-file`). | media | **completado (housekeeping bundle #4)** |
 | 5 | HDU-EXPLORE-001 | Splash nuevo depende de feature flags + go_router + auth. No implementar antes de tener esos 3. | alta | bloqueante para HDU-006 |
 | 6 | HDU-002 | `Future.delayed(1s)` en `main.dart` es residuo de HDU-001. Quitarlo cuando llegue HDU-004 (go_router) o HDU-005 (auth). | baja | pendiente |
-| 7 | HDU-002 | Edge function usa `service_role` + `--no-verify-jwt`. OK hoy (flags del producto), revisar cuando se agreguen flags por usuario. | media | observation (Target §13.1) |
+| 7 | HDU-002 | Edge function usa `service_role` + `--no-verify-jwt`. OK hoy (flags del producto), revisar cuando se agreguen flags por usuario. | media | **observation cerrada (housekeeping bundle #4): ya documentado en `secrets.md` + `specs/HDU-002-supabase-setup.md`. Revisar cuando se agreguen flags por usuario.** |
 | 8 | HDU-002 | Refactor: extraer `setUpAll` duplicado en 3 integration tests a helper compartido cuando se agreguen más tests en HDU-003. | baja | **completado** (test 8 dedicado) |
-| 9 | HDU-003 | Helper `registerLazySingletonIfNotRegistered<T>(factory)` para no repetir el patrón en futuros servicios (`AuthService`, `BiometricService`, etc.). | baja | pendiente (HDU futura) |
+| 9 | HDU-003 | Helper `registerLazySingletonIfNotRegistered<T>(factory)` para no repetir el patrón en futuros servicios (`AuthService`, `BiometricService`, etc.). | baja | **completado (housekeeping bundle #4)** |
 | 10 | HDU-003 | Conectar `tier_service_config.refreshInterval` con `Timer.periodic` cuando llegue la HDU de refresh automático. | baja | pendiente (HDU futura) |
 | 11 | HDU-003 | `debugPrint` con la excepción en `refresh()` — sanitizar cuando el fetcher reciba más contexto (HDU-005 con auth). | baja | **completado (housekeeping bundle #1)** |
 | 12 | HDU-003 | `_parseFlags` ignora tipos no-bool silenciosamente — loggear con `debugPrint` cuando se ignore un valor. | baja | **completado (housekeeping bundle #2)** |
@@ -151,7 +151,7 @@
 | 24 | HDU-006 | Nit de naming en el grupo "cache cold" (un test no es realmente cold porque setea un flag). | baja | **completado (housekeeping bundle #1)** |
 | 25 | HDU-006 | Fake `_FakeTierService.isCacheLoaded()` retorna `flags.isNotEmpty`; el real retorna `_cache.isNotEmpty \|\| _config.debugEnabled`. Mismatch pequeño. | baja | **completado (housekeeping bundle #1)** |
 | 26 | HDU-006 | Edge case: si el operador olvidó seedear `splash` en Supabase, el splash se salta. Documentar en runbook. | baja | **completado (housekeeping bundle #1)** |
-| 27 | HDU-006 | Wrapper de `package_info_plus` en `core/services/` — se usa directo en `splash_screen.dart`. Si aparece un segundo callsite, extraer. | baja | observation (extraer cuando haya 2º callsite) |
+| 27 | HDU-006 | Wrapper de `package_info_plus` en `core/services/` — se usa directo en `splash_screen.dart`. Si aparece un segundo callsite, extraer. | baja | **observation cerrada (housekeeping bundle #4): confirmado 1 callsite (`splash_screen.dart`). Sigue como "watch" — extraer cuando aparezca 2º callsite.** |
 | 28 | HDU-006 | Test del `catch (_)` de `_loadAppVersion` — coverage gap. Si alguien borra el try/catch, ningún test lo detecta. | baja | **completado (housekeeping bundle #1, documentado como no-testeable)** |
 | 29 | **Lección #8 (memoria)** | **Tests verde NO es app funcionando. QA en device real es obligatorio antes de merge para cualquier HDU con OAuth / push / deep links / biometría nativa / pagos.** | alta | regla operativa (cross-project) |
 | 30 | **BUG-001** | **`AuthService.signOut()` también desloguea de Google** — sin esto, el chooser "recordaba" la cuenta después del signOut. | **alta** | **completado (housekeeping bundle #1)** |

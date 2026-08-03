@@ -29,6 +29,36 @@ import '../tiers/tier_service.dart';
 /// `final tierService = getIt<TierService>();`
 final GetIt getIt = GetIt.instance;
 
+/// Registra un singleton lazy en GetIt solo si el tipo `T` NO está ya
+/// registrado. Idempotente: si se llama dos veces para el mismo tipo,
+/// la segunda es no-op (el factory anterior se conserva).
+///
+/// **Por qué existe (housekeeping bundle #4, follow-up #9):** el patrón
+/// `if (!getIt.isRegistered<T>()) { getIt.registerLazySingleton<T>(...); }`
+/// se repite 4 veces en `setupServiceLocator`. Centralizarlo aquí:
+///   - Reduce el ruido visual (1 línea vs 4).
+///   - Hace que la regla "registro idempotente" sea explícita y testeable
+///     (el helper se cubre en `service_locator_test.dart`).
+///   - Si en el futuro queremos cambiar la política (ej. permitir
+///     re-registro en tests con un flag), el cambio es en un solo lugar.
+///
+/// **Diferencia con `getIt.registerLazySingleton`:** ese falla si el
+/// tipo ya está registrado (lanza `StateError`). Este helper es seguro
+/// para invocaciones repetidas — pensado para `setupServiceLocator`
+/// que puede ser llamado en varios puntos de test.
+///
+/// **Uso típico en `setupServiceLocator`:**
+/// ```dart
+/// registerLazySingletonIfNotRegistered<TierService>(TierService.new);
+/// ```
+void registerLazySingletonIfNotRegistered<T extends Object>(
+  T Function() factory,
+) {
+  if (!getIt.isRegistered<T>()) {
+    getIt.registerLazySingleton<T>(factory);
+  }
+}
+
 /// Registra todos los singletons lazy de la app. Llamar UNA vez desde
 /// `main.dart` después de `initSupabase(env)`. Idempotente: si se
 /// llama dos veces, la segunda es no-op (los registros existentes
@@ -46,40 +76,32 @@ void setupServiceLocator(EnvConfig env) {
   // El constructor de `TierService` usa el fetcher por default
   // (pega a la edge function de Supabase). Los tests inyectan un fake
   // registrando manualmente su propia factory después del reset.
-  if (!getIt.isRegistered<TierService>()) {
-    getIt.registerLazySingleton<TierService>(TierService.new);
-  }
+  registerLazySingletonIfNotRegistered<TierService>(TierService.new);
 
   // `AuthService` (HDU-005, AC2): singleton lazy, igual que
   // `TierService`. El constructor por default pega a
   // `Supabase.instance.client.auth`; los tests inyectan fakes.
   // También registramos `GoogleSignInHandler` para que `AuthService`
   // lo encuentre con `getIt<GoogleSignInHandler>()` cuando se cree.
-  if (!getIt.isRegistered<GoogleSignInHandler>()) {
-    getIt.registerLazySingleton<GoogleSignInHandler>(
-      // BUG-001 fix: el handler se construye con el Web OAuth Client ID
-      // del env. Sin esto, el plugin `google_sign_in` no puede pedir el
-      // `idToken` al servidor de Google y el flujo se queda colgado
-      // silenciosamente. Ver `specs/BUG-001-google-signin.md`.
-      //
-      // El handler NO es const aquí (el `webClientId` es runtime),
-      // pero se construye lazy — el costo es 1 alloc al primer
-      // `getIt<GoogleSignInHandler>()`.
-      () => GoogleSignInHandler(webClientId: env.googleWebClientId),
-    );
-  }
-  if (!getIt.isRegistered<AuthService>()) {
-    getIt.registerLazySingleton<AuthService>(
-      () => AuthService(googleSignInHandler: getIt<GoogleSignInHandler>()),
-    );
-  }
+  registerLazySingletonIfNotRegistered<GoogleSignInHandler>(
+    // BUG-001 fix: el handler se construye con el Web OAuth Client ID
+    // del env. Sin esto, el plugin `google_sign_in` no puede pedir el
+    // `idToken` al servidor de Google y el flujo se queda colgado
+    // silenciosamente. Ver `specs/BUG-001-google-signin.md`.
+    //
+    // El handler NO es const aquí (el `webClientId` es runtime),
+    // pero se construye lazy — el costo es 1 alloc al primer
+    // `getIt<GoogleSignInHandler>()`.
+    () => GoogleSignInHandler(webClientId: env.googleWebClientId),
+  );
+  registerLazySingletonIfNotRegistered<AuthService>(
+    () => AuthService(googleSignInHandler: getIt<GoogleSignInHandler>()),
+  );
 
   // `BiometricService` (HDU-005b, AC2): singleton lazy. Usa
   // `local_auth` y `flutter_secure_storage` por default. Los tests
   // inyectan fakes (funciones y un `_MemoryStorage`).
-  if (!getIt.isRegistered<BiometricService>()) {
-    getIt.registerLazySingleton<BiometricService>(BiometricService.new);
-  }
+  registerLazySingletonIfNotRegistered<BiometricService>(BiometricService.new);
 
   // `InactivityMonitor` (HDU-005b, AC20): NO se registra como
   // singleton lazy. Es un widget — se instancia cuando
@@ -110,16 +132,14 @@ void setupServiceLocator(EnvConfig env) {
   // API más complicada (separar el registro del router del
   // service_locator) y se documenta como follow-up si la UX lo
   // exige.
-  if (!getIt.isRegistered<GoRouter>()) {
-    getIt.registerLazySingleton<GoRouter>(
-      // El router recibe GETTERS, no instancias, para que el redirect
-      // consulte los servicios actuales en cada navegación. Esto permite
-      // que `signIn*` y `signOut` (que mutan la sesión) se reflejen en
-      // el router sin tener que reconstruirlo.
-      () => buildAppRouter(
-        authServiceGetter: () => getIt<AuthService>(),
-        refreshStream: getIt<AuthService>().authStateChanges,
-      ),
-    );
-  }
+  registerLazySingletonIfNotRegistered<GoRouter>(
+    // El router recibe GETTERS, no instancias, para que el redirect
+    // consulte los servicios actuales en cada navegación. Esto permite
+    // que `signIn*` y `signOut` (que mutan la sesión) se reflejen en
+    // el router sin tener que reconstruirlo.
+    () => buildAppRouter(
+      authServiceGetter: () => getIt<AuthService>(),
+      refreshStream: getIt<AuthService>().authStateChanges,
+    ),
+  );
 }
