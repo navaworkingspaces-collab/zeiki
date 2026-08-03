@@ -2,7 +2,7 @@
 
 > **Snapshot rápido del estado del proyecto.** Se actualiza en el cleanup (paso 12) de cada HDU cerrada. Para el detalle de una HDU específica, ver `specs/HDU-XXX-*.md`. Para el histórico, ver `.mavis/hdu.md`.
 
-**Última actualización:** 2026-08-03 (post-housekeeping #18 part 1, PR #16 mergeado).
+**Última actualización:** 2026-08-03 (HDU-007 en implementación, sesión background con `zeiki-implementer` activa).
 
 ---
 
@@ -10,9 +10,10 @@
 
 - **Fase:** 1 (MVP).
 - **Última unidad cerrada:** Housekeeping #18 part 1 — setup Code Magic mínimo (test workflow).
-- **HDUs activas:** ninguna.
+- **HDU activa:** **HDU-007 — Flujo de confirmación de email + reset password con deep links**. Sesión background con `zeiki-implementer` corriendo.
 - **BUGs activas:** ninguno.
-- **Rama `main`:** deployable (último merge: `1de56fc` — PR #16).
+- **Rama `main`:** deployable.
+- **Rama de trabajo:** `feat/HDU-007-email-callback-flow`.
 - **Stack operativo:** Flutter 3.38.3 + Supabase (proyecto Zeiki, región `us-east-2`) + Deno para edge functions.
 - **Proyecto Supabase:** ref `iocbqjzmoneulydmeavr`, URL `https://iocbqjzmoneulydmeavr.supabase.co`. Config en `assets/.env` (en `.gitignore`).
 
