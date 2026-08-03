@@ -43,15 +43,9 @@ workflows:
     environment:
       flutter: stable
     scripts:
-      - name: Get Flutter dependencies
-        script: flutter pub get
-        show_command: true
-      - name: Analyze code
-        script: flutter analyze --no-fatal-warnings
-        show_command: true
-      - name: Run unit tests
-        script: flutter test --reporter compact
-        show_command: true
+      - flutter pub get
+      - flutter analyze --no-fatal-warnings
+      - flutter test --reporter compact
     cache:
       cache_paths:
         - ~/.pub-cache
