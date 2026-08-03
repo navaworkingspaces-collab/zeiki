@@ -142,4 +142,63 @@ void main() {
           reason: 'getInstance() debe devolver una instancia de TierService');
     });
   });
+
+  // Housekeeping bundle #4, follow-up #9: el helper
+  // `registerLazySingletonIfNotRegistered` centraliza el patrón
+  // idempotente de `setupServiceLocator`. Estos tests cubren su
+  // contrato explícitamente.
+  group('registerLazySingletonIfNotRegistered()', () {
+    test('registra el tipo si NO está registrado', () {
+      // Pre-condición: tipo custom NO registrado.
+      expect(getIt.isRegistered<_SampleService>(), isFalse);
+
+      registerLazySingletonIfNotRegistered<_SampleService>(
+        () => _SampleService(label: 'primera'),
+      );
+
+      expect(getIt.isRegistered<_SampleService>(), isTrue);
+      expect(getIt<_SampleService>().label, 'primera',
+          reason: 'el factory debe invocarse en el primer registro');
+    });
+
+    test('NO re-registra si el tipo YA está registrado (idempotente)', () {
+      registerLazySingletonIfNotRegistered<_SampleService>(
+        () => _SampleService(label: 'primera'),
+      );
+      final original = getIt<_SampleService>();
+
+      // Segundo intento con factory diferente. NO debe sobrescribir.
+      registerLazySingletonIfNotRegistered<_SampleService>(
+        () => _SampleService(label: 'segunda'),
+      );
+
+      expect(identical(getIt<_SampleService>(), original), isTrue,
+          reason: 'el helper es idempotente: el segundo call es no-op, '
+              'no se reemplaza el singleton original');
+      expect(getIt<_SampleService>().label, 'primera',
+          reason: 'el factory "segunda" NUNCA debe invocarse');
+    });
+
+    test('NO lanza si el tipo ya está registrado (a diferencia de '
+        'registerLazySingleton directo)', () {
+      registerLazySingletonIfNotRegistered<_SampleService>(
+        () => _SampleService(label: 'a'),
+      );
+
+      // El segundo call no debe lanzar (a diferencia de
+      // `getIt.registerLazySingleton` que SÍ lanza).
+      expect(
+        () => registerLazySingletonIfNotRegistered<_SampleService>(
+          () => _SampleService(label: 'b'),
+        ),
+        returnsNormally,
+      );
+    });
+  });
+}
+
+/// Tipo custom solo para los tests del helper. No se usa en la app.
+class _SampleService {
+  _SampleService({required this.label});
+  final String label;
 }

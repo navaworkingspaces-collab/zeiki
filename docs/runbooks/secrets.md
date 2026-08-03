@@ -2,7 +2,7 @@
 
 > **Procedimiento único para guardar, rotar y responder a incidentes con credenciales del proyecto.** Este documento es operativo (el "cómo"). Las reglas de qué NO hacer están en `docs/conventions.md §6`. Las reglas de qué SÍ documentar están en `docs/conventions.md §10`.
 
-**Última actualización:** 2026-07-29 (creado post-HDU-002 setup Supabase).
+**Última actualización:** 2026-07-31 (agregada sección "Inyección de variables en build (CI)", housekeeping bundle #4 follow-up #4).
 
 ---
 
@@ -22,6 +22,31 @@ Cada capa de secretos tiene su lugar. NO se mezclan.
 | **Config de entorno del cliente** | `SUPABASE_URL` y `SUPABASE_ANON_KEY` (públicos, no son secretos). | `assets/.env` (en `.gitignore`) para dev. En CI: variables de build inyectadas con `--dart-define-from-file`. | El equipo de dev. |
 | **Secretos del backend (Supabase)** | Credenciales de la BD, service_role key, secrets de edge functions. | Supabase Dashboard → Settings → API / Database. Rotación: cada 6 meses o ante sospecha de compromiso. | El owner del proyecto (Hugo). |
 | **Secretos de CI/CD (Code Magic)** | Credenciales para buildear y desplegar. | Code Magic → Environment Variables. Rotación: cada 6 meses. | Hugo. |
+
+### Inyección de variables en build (CI)
+
+**Contexto (housekeeping bundle #4, follow-up #4):** las variables de entorno del cliente (`SUPABASE_URL`, `SUPABASE_ANON_KEY`, `GOOGLE_WEB_CLIENT_ID`) tienen dos modos de inyección, según el ambiente:
+
+| Ambiente | Cómo se inyectan | Comando |
+|----------|------------------|---------|
+| **Dev local** | Como asset `assets/.env` (cargado por `flutter_dotenv` en runtime). El archivo está en `.gitignore`. | `flutter run` (lee `assets/.env` automáticamente). |
+| **CI / build de release** | Como `--dart-define` en el comando de build. **El archivo `.env` NO se incluye como asset en builds de release** porque podría quedar desempaquetado en el APK. | `flutter build apk --release --dart-define-from-file=ci.env` |
+
+**Formato del archivo para CI:** el archivo `ci.env` (que vive solo en Code Magic, NUNCA en el repo) tiene **exactamente la misma forma** que `assets/.env.example`:
+
+```bash
+SUPABASE_URL=https://<project-id>.supabase.co
+SUPABASE_ANON_KEY=<anon-key-publica>
+GOOGLE_WEB_CLIENT_ID=<web-client-id>.apps.googleusercontent.com
+APP_ENV=staging
+DEBUG_LOGS=false
+```
+
+**Cómo funciona `--dart-define-from-file`:** Flutter compila cada `String.fromEnvironment('SUPABASE_URL')` (o el equivalente con `dotenv`) con el valor del archivo pasado. El archivo se lee en build time, no se incluye en el binario. **El binario resultante contiene los valores literales en el código compilado** (como si fueran `const`), pero NO el archivo de origen. Esto es seguro para `SUPABASE_URL` y `SUPABASE_ANON_KEY` (son públicos) y para `GOOGLE_WEB_CLIENT_ID` (también público).
+
+**Para qué sirve `--dart-define` (vs `--dart-define-from-file`):** el primero es para 1-2 variables (`flutter build apk --dart-define=KEY=value`). El segundo es para muchas. En CI siempre usamos el segundo.
+
+**Antipatrón a evitar:** incluir `assets/.env` como `flutter.assets:` en `pubspec.yaml` Y en builds de release. Si el `.env` está como asset, queda desempaquetado en el APK y se puede leer con `unzip`. En cambio, con `--dart-define`, los valores quedan como literales compilados dentro del binario (más seguro aunque el trade-off es que cualquier variable que pusiste queda en el binario para siempre, hasta que recompiles).
 
 **Reglas duras:**
 
