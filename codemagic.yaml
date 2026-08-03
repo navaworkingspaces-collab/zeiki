@@ -43,6 +43,7 @@ workflows:
     environment:
       flutter: stable
     scripts:
+      - cp assets/.env.ci assets/.env
       - flutter pub get
       - flutter analyze --no-fatal-warnings
       - flutter test --reporter compact
