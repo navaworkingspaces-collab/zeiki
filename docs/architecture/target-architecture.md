@@ -828,7 +828,7 @@ Lo que **NO** se hace en Zeiki, y por qué.
 | `docs/handoffs/` | Pendiente | Mavis | Al cerrar la primera HDU de la reescritura. |
 | `docs/features/<nombre>.md` | Pendiente | Mavis | Al cerrar la primera feature del MVP. |
 | `docs/templates/` | **Creado** | Mavis | Existe `hdu-explore.md`. Plantilla para HDUs de research. |
-| `codemagic.yaml` | Pendiente | Mavis | Al configurar CI/CD (Fase 1). |
+| `codemagic.yaml` | **Creado** | Mavis | Setup mínimo (test workflow) en PR #16. Runbook: `docs/runbooks/codemagic-setup.md`. Expansión (build APK + deploy Firebase + integration tests) sale en HDU futura. |
 | `supabase/migrations/` (primera migración) | Pendiente | Mavis | Al implementar la primera HDU con cambio de schema. |
 | `feature_sync_test.dart` | Pendiente | Mavis | Al implementar el sistema de feature flags. |
 | **Doc auto-generada de feature flags** | Aspiración | Mavis | Al implementar el sistema de feature flags. |
