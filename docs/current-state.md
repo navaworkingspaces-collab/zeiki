@@ -2,17 +2,17 @@
 
 > **Snapshot rápido del estado del proyecto.** Se actualiza en el cleanup (paso 12) de cada HDU cerrada. Para el detalle de una HDU específica, ver `specs/HDU-XXX-*.md`. Para el histórico, ver `.mavis/hdu.md`.
 
-**Última actualización:** 2026-08-03 (post-housekeeping bundle #5 part 1, PR #14 mergeado).
+**Última actualización:** 2026-08-03 (post-cierre del follow-up #3 con política, PR #15 mergeado).
 
 ---
 
 ## 📍 Dónde estamos
 
 - **Fase:** 1 (MVP).
-- **Última unidad cerrada:** Housekeeping bundle #5 part 1 — bump `package_info_plus` 8.3.1 → 9.0.1.
+- **Última unidad cerrada:** Cierre del follow-up #3 con política de actualización de deps.
 - **HDUs activas:** ninguna.
 - **BUGs activas:** ninguno.
-- **Rama `main`:** deployable (último merge: `e3c3e66` — PR #14).
+- **Rama `main`:** deployable.
 - **Stack operativo:** Flutter 3.38.3 + Supabase (proyecto Zeiki, región `us-east-2`) + Deno para edge functions.
 - **Proyecto Supabase:** ref `iocbqjzmoneulydmeavr`, URL `https://iocbqjzmoneulydmeavr.supabase.co`. Config en `assets/.env` (en `.gitignore`).
 
@@ -117,9 +117,9 @@
 ## 🔜 Próximos pasos sugeridos (secuencia decidida con Hugo)
 
 - **Decidir la siguiente unidad de trabajo.** Opciones:
-  - **Housekeeping bundle #5:** quedan 6 follow-ups non-blocker (#3, #10, #13, #18 + 2 nuevos que aparezcan). Los 4 que quedan son refactors medianos (#3 deps, #10 refresh, #13 CLI, #18 CI/CD) o aspiracionales; menos quick wins que el #4.
-  - **HDU-007 / HDU-008 (feature):** próximo paso del feature roadmap (ej. onboarding, fiscal, descarga de CFDIs, etc.).
-  - **Pausa / descanso** — ha sido un día largo, hemos cerrado 7 HDUs + 1 BUG + 4 housekeeping bundles en una sesión.
+  - **HDU-007 / HDU-008 (feature nueva):** próximo paso del feature roadmap. Onboarding, fiscal, clientes, o descarga de CFDIs.
+  - **Housekeeping bundle #6:** quedan 3 follow-ups no bloqueantes (#10 refresh interval, #13 CLI feature_manifest, #18 CI/CD). No urge; sale cuando haya motivo.
+  - **Pausa / descanso** — la sesión ya lleva varias horas y hemos cerrado 7 HDUs + 1 BUG + 5 housekeeping bundles + 1 cierre de política.
 
 ## 🐛 Follow-ups activos (de HDUs cerradas)
 
@@ -127,7 +127,7 @@
 |---|--------|-------------|-----------|--------|
 | 1 | HDU-001 | `zeiki-reviewer` creado (code review 3 gates). | media | **completado** |
 | 2 | HDU-001 | Si vuelven a salir warnings de Gradle Java 8, abrir HDU para subir target a Java 11/17. | baja | watch (no se reprodujeron) |
-| 3 | HDU-001 | 27 paquetes de `pub get` con updates disponibles. NO actualizar a ciegas — HDU dedicada de "actualizar deps base" cuando se decida. | baja | **en progreso (1/9 deps actualizadas — housekeeping bundle #5)** |
+| 3 | HDU-001 | Política: "deps se actualizan solo con trigger concreto, no en revisión periódica". Triggers: CVE, stack upgrade forza incompatibilidad, feature necesita API, autor abandona la dep, conflicto con otras deps. NO son triggers: "hay updates disponibles", "es buena práctica", "pasaron X meses". | baja | **cerrado con política (2026-08-03) — ver `conventions.md §11 "Cuándo actualizar una dep (triggers)"`** |
 | 4 | HDU-001 | Documentar `assets/.env.example` no se incluye como asset cuando se conecte Supabase (usar `--dart-define-from-file`). | media | **completado (housekeeping bundle #4)** |
 | 5 | HDU-EXPLORE-001 | Splash nuevo depende de feature flags + go_router + auth. No implementar antes de tener esos 3. | alta | bloqueante para HDU-006 |
 | 6 | HDU-002 | `Future.delayed(1s)` en `main.dart` es residuo de HDU-001. Quitarlo cuando llegue HDU-004 (go_router) o HDU-005 (auth). | baja | pendiente |
@@ -210,3 +210,27 @@
 - **Notas:**
   - El patrón "1 dep por PR" permite rollback granular si algo se rompe.
   - Hugo aprobó este enfoque después de los bundles #1-#4 (que eran 3-10 quick wins por bundle). Las deps son más invasivas, así que el tradeoff es diferente: un bundle con 9 cambios de versión es muy difícil de revertir si algo se rompe.
+
+## 📜 Cierre del follow-up #3 con política de actualización de deps (2026-08-03)
+
+- **Tipo:** doc (cierre de follow-up con política operativa)
+- **PR:** [#15](https://github.com/navaworkingspaces-collab/zeiki/pull/15) — pendiente de merge
+- **Cambio:** política de cuándo actualizar deps, documentada en `conventions.md §11` (nueva subsección "Cuándo actualizar una dep (triggers)").
+- **Triggers HARD (obligatorio, no se discute):**
+  1. **CVE de seguridad publicado** que afecte a la versión actual.
+  2. **Stack upgrade fuerza incompatibilidad** (Flutter/Dart suben y la dep no soporta).
+  3. **Una HDU/feature nueva necesita una API específica** de la versión mayor disponible.
+- **Triggers SOFT (recomendado, no obligatorio):**
+  4. La versión actual ya no recibe parches del autor (deprecation announced, repo archivado, último release > 2 años).
+  5. Compatibilidad con el resto del stack degradada (conflicto de versiones con otras deps).
+- **NO son triggers válidos:** "hay updates disponibles", "es buena práctica estar actualizado", "pasaron X meses", "el review sugirió actualizar sin contexto".
+- **Anti-patrón documentado:** NO listar deps outdated como follow-up de housekeeping rutinario.
+- **Implicación operacional para Mavis (orquestador):**
+  - NO escanear `flutter pub outdated` en cada bundle.
+  - NO proponer bumps preventivos sin trigger.
+  - SÍ reportar inmediatamente si detecta un CVE conocido.
+  - SÍ verificar deps cuando (a) Mavis planea HDU con feature nueva, (b) Mavis hace stack upgrade, (c) el usuario pregunta explícitamente.
+- **Notas:**
+  - Hugo pidió esta política explícitamente: "no me los pases como pendientes aunque no sean necesarios, me confunde; pero tampoco quiero que no los pases, deben aparecer cuando deben".
+  - El bundle #5 part 1 (`package_info_plus` 8.3.1 → 9.0.1) queda como el único bump preventivo del proyecto. Se hizo para validar el proceso "1 dep por PR", no porque hubiera trigger HARD. Es la **excepción** que confirma la regla.
+- **Backlog:** 5 → 4 (#3 desaparece como pendiente, reemplazado por la política).
