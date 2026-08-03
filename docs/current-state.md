@@ -2,17 +2,17 @@
 
 > **Snapshot rápido del estado del proyecto.** Se actualiza en el cleanup (paso 12) de cada HDU cerrada. Para el detalle de una HDU específica, ver `specs/HDU-XXX-*.md`. Para el histórico, ver `.mavis/hdu.md`.
 
-**Última actualización:** 2026-07-31 (post-housekeeping bundle #4, PR #13 mergeado).
+**Última actualización:** 2026-08-03 (post-housekeeping bundle #5 part 1, PR #14 mergeado).
 
 ---
 
 ## 📍 Dónde estamos
 
 - **Fase:** 1 (MVP).
-- **Última unidad cerrada:** Housekeeping bundle #4 — quick wins (#4, #7, #9, #27).
+- **Última unidad cerrada:** Housekeeping bundle #5 part 1 — bump `package_info_plus` 8.3.1 → 9.0.1.
 - **HDUs activas:** ninguna.
 - **BUGs activas:** ninguno.
-- **Rama `main`:** deployable (último merge: `81cf154` — PR #13).
+- **Rama `main`:** deployable (último merge: `e3c3e66` — PR #14).
 - **Stack operativo:** Flutter 3.38.3 + Supabase (proyecto Zeiki, región `us-east-2`) + Deno para edge functions.
 - **Proyecto Supabase:** ref `iocbqjzmoneulydmeavr`, URL `https://iocbqjzmoneulydmeavr.supabase.co`. Config en `assets/.env` (en `.gitignore`).
 
@@ -127,7 +127,7 @@
 |---|--------|-------------|-----------|--------|
 | 1 | HDU-001 | `zeiki-reviewer` creado (code review 3 gates). | media | **completado** |
 | 2 | HDU-001 | Si vuelven a salir warnings de Gradle Java 8, abrir HDU para subir target a Java 11/17. | baja | watch (no se reprodujeron) |
-| 3 | HDU-001 | 27 paquetes de `pub get` con updates disponibles. NO actualizar a ciegas — HDU dedicada de "actualizar deps base" cuando se decida. | baja | pendiente (HDU dedicada, riesgoso) |
+| 3 | HDU-001 | 27 paquetes de `pub get` con updates disponibles. NO actualizar a ciegas — HDU dedicada de "actualizar deps base" cuando se decida. | baja | **en progreso (1/9 deps actualizadas — housekeeping bundle #5)** |
 | 4 | HDU-001 | Documentar `assets/.env.example` no se incluye como asset cuando se conecte Supabase (usar `--dart-define-from-file`). | media | **completado (housekeeping bundle #4)** |
 | 5 | HDU-EXPLORE-001 | Splash nuevo depende de feature flags + go_router + auth. No implementar antes de tener esos 3. | alta | bloqueante para HDU-006 |
 | 6 | HDU-002 | `Future.delayed(1s)` en `main.dart` es residuo de HDU-001. Quitarlo cuando llegue HDU-004 (go_router) o HDU-005 (auth). | baja | pendiente |
@@ -192,3 +192,21 @@
 - **Notas:**
   - El bundle #4 es el primero con un refactor de código (#9) que toca la infraestructura de DI. El comportamiento es idéntico (cubierto por el test de idempotencia existente + 3 tests nuevos del helper).
   - Los 6 que quedan son más "duros": #3 (deps update riesgoso), #10 (refresh interval es feature, no chore), #13 (CLI feature_manifest aspiración), #18 (CI/CD grande). El próximo bundle tendrá menos quick wins, así que vale la pena pensar en HDUs de feature.
+
+## 🧹 Housekeeping bundle #5 — deps update part 1 (2026-08-03)
+
+- **Tipo:** chore (serie de bumps, 1 dep por PR)
+- **PR:** [#14](https://github.com/navaworkingspaces-collab/zeiki/pull/14) — mergeado a `main` (commit `e3c3e66`, Fast-forward)
+- **Dep:** `package_info_plus: ^8.0.2` → `^9.0.1`
+- **Análisis del changelog:**
+  - 8.3.1 → 9.0.0: cambio de compile SDK en Android + requisito AGP >= 8.12.1.
+  - 9.0.0 → 10.0.0: **NO actualizable** sin subir Flutter (10.x requiere 3.41.6+, proyecto en 3.38.3).
+- **Verificación:**
+  - `flutter analyze`: 0 issues.
+  - `flutter test`: 194/194 verde.
+  - `flutter build apk --debug`: OK (157 MB). El proyecto tiene AGP 8.11.1 y 9.0.0 dice requerir 8.12.1+; en la práctica compila sin tocar AGP.
+- **Sin QA en device real:** el cambio de dep no afecta comportamiento observable (mismo API, mismo valor devuelto en el footer del splash).
+- **Próximas deps (8 más):** flutter_bloc 8→9, flutter_dotenv 5→6, flutter_secure_storage 9→10, get_it 7→9, go_router 14→17, google_sign_in 6→7, local_auth 2→3, app_links 7→7.2 (minor). Cada una en su propio PR siguiendo este patrón.
+- **Notas:**
+  - El patrón "1 dep por PR" permite rollback granular si algo se rompe.
+  - Hugo aprobó este enfoque después de los bundles #1-#4 (que eran 3-10 quick wins por bundle). Las deps son más invasivas, así que el tradeoff es diferente: un bundle con 9 cambios de versión es muy difícil de revertir si algo se rompe.
