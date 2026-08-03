@@ -2,17 +2,17 @@
 
 > **Snapshot rápido del estado del proyecto.** Se actualiza en el cleanup (paso 12) de cada HDU cerrada. Para el detalle de una HDU específica, ver `specs/HDU-XXX-*.md`. Para el histórico, ver `.mavis/hdu.md`.
 
-**Última actualización:** 2026-08-03 (post-cierre del follow-up #3 con política, PR #15 mergeado).
+**Última actualización:** 2026-08-03 (post-housekeeping #18 part 1, PR #16 mergeado).
 
 ---
 
 ## 📍 Dónde estamos
 
 - **Fase:** 1 (MVP).
-- **Última unidad cerrada:** Cierre del follow-up #3 con política de actualización de deps.
+- **Última unidad cerrada:** Housekeeping #18 part 1 — setup Code Magic mínimo (test workflow).
 - **HDUs activas:** ninguna.
 - **BUGs activas:** ninguno.
-- **Rama `main`:** deployable.
+- **Rama `main`:** deployable (último merge: `1de56fc` — PR #16).
 - **Stack operativo:** Flutter 3.38.3 + Supabase (proyecto Zeiki, región `us-east-2`) + Deno para edge functions.
 - **Proyecto Supabase:** ref `iocbqjzmoneulydmeavr`, URL `https://iocbqjzmoneulydmeavr.supabase.co`. Config en `assets/.env` (en `.gitignore`).
 
@@ -142,7 +142,7 @@
 | 15 | HDU-004 | Sanitizar `state.uri` en `errorBuilder` del router. Bajo riesgo hoy, escala cuando crezca el número de rutas. | baja | **completado (housekeeping bundle #3)** |
 | 16 | HDU-004 | Restringir intent filter `zeiki://` a hosts específicos en `AndroidManifest.xml`. Mismo motivo que #14. | baja | **completado (housekeeping bundle #3)** |
 | 17 | HDU-004 | Mover `appRouter` a GetIt como singleton lazy. Necesario cuando llegue HDU-005 (auth con `redirect:`) y `AuthService`. | media | **completado (se hizo en HDU-005, PR #6)** |
-| 18 | HDU-004 | Cobertura del integration test en CI: back nativo + rotación + deep link end-to-end con `adb` automatizados. | baja | pendiente (cuando se configure CI) |
+| 18 | HDU-004 | Cobertura del integration test en CI: back nativo + rotación + deep link end-to-end con `adb` automatizados. | baja | **en progreso (1/? — housekeeping #18 part 1: codemagic.yaml mínimo creado, falta activar en dashboard y扩展). Ver `docs/runbooks/codemagic-setup.md`.** |
 | 19 | HDU-004 | Regla "push para detail/sheet, go para tab/sección" — documentar como patrón canónico cuando haya más navegación. | baja | **completado (housekeeping bundle #1)** |
 | 20 | HDU-004 | `android:label="zeiki"` en minúsculas (debería ser "Zeiki" con Z mayúscula). Pre-existente a HDU-001. | baja | **completado (housekeeping bundle #1)** |
 | 21 | HDU-004 | Renombrar test de "rotación" a "router conserva ruta tras rebuild" — el nombre actual es engañoso. | baja | **obsoleto** (el test nunca se llamó "rotación", ya era "state restoration está habilitado (AC7)" en `widget_test.dart:148`) |
@@ -234,3 +234,30 @@
   - Hugo pidió esta política explícitamente: "no me los pases como pendientes aunque no sean necesarios, me confunde; pero tampoco quiero que no los pases, deben aparecer cuando deben".
   - El bundle #5 part 1 (`package_info_plus` 8.3.1 → 9.0.1) queda como el único bump preventivo del proyecto. Se hizo para validar el proceso "1 dep por PR", no porque hubiera trigger HARD. Es la **excepción** que confirma la regla.
 - **Backlog:** 5 → 4 (#3 desaparece como pendiente, reemplazado por la política).
+
+## 🧹 Housekeeping #18 — CI setup part 1 (2026-08-03)
+
+- **Tipo:** chore (CI/CD setup)
+- **PR:** [#16](https://github.com/navaworkingspaces-collab/zeiki/pull/16) — mergeado a `main` (commit `1de56fc`, Fast-forward)
+- **Cambios (4 archivos, +190/-2):**
+  1. **`codemagic.yaml`** (NUEVO, raíz) — workflow `test` con 3 scripts: `flutter pub get`, `flutter analyze`, `flutter test`. Triggers: push a main + pull_request. Cache de `~/.pub-cache` y `.dart_tool`.
+  2. **`docs/runbooks/codemagic-setup.md`** (NUEVO) — runbook paso a paso para que Hugo active el pipeline en codemagic.io. Incluye troubleshooting.
+  3. **`docs/architecture/target-architecture.md`** — `codemagic.yaml` de "Pendiente" a "Creado".
+  4. **`docs/git.md`** — status del deploy de edge functions de "TBD" a "Parcial" (test workflow creado, deploy sigue TBD).
+- **Acción de Hugo pendiente:**
+  1. Crear cuenta en codemagic.io (login con GitHub).
+  2. Agregar el repo `navaworkingspaces-collab/zeiki`.
+  3. Code Magic detecta `codemagic.yaml` automáticamente.
+  4. Click en workflow `test` → "Start new build" → seleccionar `main` → "Start build".
+  5. Verificar que pasa (5-8 min la primera vez).
+- **Lo que NO está (sale en HDU futura):**
+  - Build de APK debug/release.
+  - Deploy a Firebase App Distribution (sin USB).
+  - Integration tests con `adb` (back nativo, rotación, deep links).
+  - Coverage report.
+  - Deploy de edge functions de Supabase.
+- **Notas:**
+  - El setup mínimo valida que el pipeline funciona antes de invertir 2 días en扩展. Si aporta valor, las siguientes partes salen en HDUs diferentes.
+  - Plan gratis de Code Magic es suficiente para 1 dev + 1 repo público. Si el repo es privado y excede minutos, evaluar plan de pago.
+  - Workflow NO usa secrets (los tests no tocan Supabase real). Cuando se agregue deploy a Firebase, ahí se necesitan secrets documentados en el runbook.
+- **Backlog:** #18 de "pendiente" a "en progreso (1/?)" — Hugo debe activar el pipeline antes de seguir.
