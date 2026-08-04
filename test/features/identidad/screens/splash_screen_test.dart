@@ -326,6 +326,7 @@ class _FakeAuthService implements AuthService {
   Future<sb.AuthResponse> signUpWithEmail({
     required String email,
     required String password,
+    String? emailRedirectTo,
   }) async =>
       throw const AuthException(
         kind: AuthErrorKind.unknown,
@@ -347,6 +348,26 @@ class _FakeAuthService implements AuthService {
         kind: AuthErrorKind.unknown,
         message: 'not used in splash_screen_test',
       );
+
+  // HDU-007: stubs mínimos (no usados por el splash). El `implements`
+  // exige la firma.
+  @override
+  Future<void> resetPasswordForEmail({required String email}) async {
+    throw const AuthException(
+      kind: AuthErrorKind.unknown,
+      message: 'not used in splash_screen_test',
+    );
+  }
+
+  @override
+  Future<sb.UserResponse> updateUserPassword({
+    required String newPassword,
+  }) async {
+    throw const AuthException(
+      kind: AuthErrorKind.unknown,
+      message: 'not used in splash_screen_test',
+    );
+  }
 }
 
 /// `BiometricService` fake mínimo (no usado por el splash — AC10).

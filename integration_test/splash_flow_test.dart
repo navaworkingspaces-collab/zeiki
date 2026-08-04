@@ -208,6 +208,7 @@ class _FakeAuthService implements AuthService {
   Future<sb.AuthResponse> signUpWithEmail({
     required String email,
     required String password,
+    String? emailRedirectTo,
   }) async =>
       throw const AuthException(
         kind: AuthErrorKind.unknown,
@@ -226,6 +227,19 @@ class _FakeAuthService implements AuthService {
 
   @override
   Future<sb.AuthResponse> signInWithGoogle() async => throw const AuthException(
+        kind: AuthErrorKind.unknown,
+        message: 'not used in splash_flow_test',
+      );
+
+  // HDU-007: stubs mínimos. No usados en este integration test.
+  @override
+  Future<void> resetPasswordForEmail({required String email}) async => throw const AuthException(
+        kind: AuthErrorKind.unknown,
+        message: 'not used in splash_flow_test',
+      );
+
+  @override
+  Future<sb.UserResponse> updateUserPassword({required String newPassword}) async => throw const AuthException(
         kind: AuthErrorKind.unknown,
         message: 'not used in splash_flow_test',
       );

@@ -58,6 +58,34 @@
                 <data android:scheme="zeiki" android:host="unlock" />
                 <data android:scheme="zeiki" android:host="home" />
             </intent-filter>
+            <!-- HDU-007 (AC2, AC8): deep links del SDK de Supabase.
+                 El scheme `io.supabase.flutter` lo usa Supabase para
+                 los links de email confirmation y reset password. Sin
+                 este intent-filter, el link del email abriría el
+                 navegador (no la app) y el user quedaría sin confirmar
+                 o sin poder cambiar su contraseña.
+
+                 Mantenemos `login-callback` por compatibilidad con el
+                 legacy `seiki_app`, aunque el flujo de Google Sign-In
+                 de Zeiki no lo usa (Zeiki usa `signInWithIdToken`
+                 directo, no OAuth de Supabase). El handler
+                 `_allowedDeepLinkSchemes` de `app_links_handler.dart`
+                 acepta el scheme, pero `_allowedDeepLinkHosts` NO
+                 incluye `login-callback` (defense in depth: el callback
+                 lo procesa `supabase_flutter._startDeeplinkObserver`,
+                 no nuestro handler).
+
+                 Mismo `autoVerify="false"` que el intent-filter de
+                 `zeiki://` por la misma razón: scheme custom, no App
+                 Links verificados. -->
+            <intent-filter android:autoVerify="false">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="io.supabase.flutter" android:host="login-callback" />
+                <data android:scheme="io.supabase.flutter" android:host="verify-email" />
+                <data android:scheme="io.supabase.flutter" android:host="reset-password" />
+            </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->

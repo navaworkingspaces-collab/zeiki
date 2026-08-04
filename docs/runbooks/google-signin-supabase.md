@@ -202,3 +202,45 @@ El cert de release tendrá su propio SHA-1. Se agrega:
 - En Supabase (no requiere cambio — el provider es único).
 
 Por ahora (MVP) solo se necesita el SHA-1 de debug.
+
+---
+
+## Addendum (HDU-007) — Email confirmation y reset password usan deep links
+
+> **Aplica desde HDU-007.** Los flujos de confirmación de email
+> (signup) y de reset password también usan deep links para abrir
+> directamente en la app en vez de en el navegador. El scheme es
+> `io.supabase.flutter://` (mismo que usaba el legacy `seiki_app`,
+> knowledge reuse según ADR-009). NO usa HTTPS / App Links
+> verificados (sale en HDU futura cuando Zeiki tenga dominio).
+
+- **Email confirmation:** cuando un user se registra con
+  `AuthService.signUpWithEmail`, Supabase manda un email con un
+  link `io.supabase.flutter://verify-email/?token=...`. Al hacer
+  tap, Android abre Zeiki (gracias al intent-filter en
+  `AndroidManifest.xml`) y la app navega a `/auth/verify-email`
+  con un mensaje de éxito + CTA a /login.
+- **Reset password:** desde el botón "¿Olvidaste tu contraseña?" en
+  LoginScreen, el user pide el link. Supabase manda un email con
+  `io.supabase.flutter://reset-password/?token=...`. Al hacer tap,
+  la app navega a `/auth/reset-password` (terminal) con un form
+  para nueva password. Al confirmar, el user queda logueado.
+
+**Si el link abre el navegador en vez de la app** (no debería pasar
+si la config está OK, pero si pasa):
+
+1. Verifica que el `AndroidManifest.xml` tiene el intent-filter con
+   `android:scheme="io.supabase.flutter"` y los hosts
+   `verify-email` + `reset-password` (ver `lib/.../AndroidManifest.xml`).
+2. Verifica que en Supabase Dashboard → **Authentication** →
+   **URL Configuration** esté permitido el redirect. Hoy Zeiki no
+   necesita agregar nada ahí (el `emailRedirectTo` es absoluto,
+   no se valida contra la lista), pero si en el futuro Supabase
+   lo exige, agregar `io.supabase.flutter://verify-email/` y
+   `io.supabase.flutter://reset-password/` como redirect URIs
+   permitidos.
+3. Si el flujo sigue sin funcionar, capturar log de la app
+   (`adb logcat | grep -i 'app_links\|supabase'`) y ver si la URI
+   llega al plugin.
+
+**Spec completo:** [specs/HDU-007-email-callback-flow.md](../../specs/HDU-007-email-callback-flow.md).

@@ -248,6 +248,7 @@ class _FakeAuthService implements AuthService {
   Future<sb.AuthResponse> signUpWithEmail({
     required String email,
     required String password,
+    String? emailRedirectTo,
   }) async {
     signUpCalls++;
     signUpLastEmail = email;
@@ -297,6 +298,28 @@ class _FakeAuthService implements AuthService {
   Future<void> signOut() async {
     signOutCalls++;
     session = null;
+  }
+
+  // HDU-007: reset password + update user password. El `implements`
+  // exige la firma. Los tests de register NO los usan pero el
+  // compilador los necesita.
+  @override
+  Future<void> resetPasswordForEmail({required String email}) async {
+    // No-op para no interferir con el resto del test.
+  }
+
+  @override
+  Future<sb.UserResponse> updateUserPassword({
+    required String newPassword,
+  }) async {
+    return sb.UserResponse.fromJson(<String, dynamic>{
+      'id': 'user-1',
+      'aud': 'authenticated',
+      'app_metadata': const <String, dynamic>{},
+      'user_metadata': const <String, dynamic>{},
+      'created_at': DateTime.now().toIso8601String(),
+      'email': 'hugo@zeiki.app',
+    });
   }
 
   @override

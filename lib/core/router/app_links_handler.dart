@@ -1,13 +1,29 @@
-// Handler de deep links de Zeiki (HDU-004, AC5).
+// Handler de deep links de Zeiki (HDU-004, HDU-007).
 //
 // Conecta el plugin `app_links` (que recibe los intents del Android)
 // con el `GoRouter` declarado en `app_router.dart`. El plugin entrega
 // una `Uri` por cada intent; nosotros la traducimos al path interno
 // del router y disparamos `router.go(...)`.
 //
-// Esquema de deep link: `zeiki://<ruta>` (sin HTTPS, deliberadamente
-// simple para MVP — ver spec §Riesgos sobre App Links verificados).
-// Ejemplo: `zeiki://login` → `/login`.
+// **Esquemas de deep link aceptados:**
+//   - `zeiki://<host>` (HDU-004) — scheme interno de Zeiki para
+//     navegación entre rutas (login, home, etc.).
+//   - `io.supabase.flutter://<host>` (HDU-007) — scheme del SDK de
+//     Supabase para los deep links de email (confirmación + reset
+//     password). Mantenemos este scheme para que el link del email
+//     generado por Supabase apunte a la app sin necesidad de dominio
+//     ni App Links verificados (ver
+//     `specs/HDU-007-email-callback-flow.md` §1, knowledge reuse del
+//     legacy `seiki_app`).
+//
+// **Hosts válidos:** cualquier host fuera de `_allowedDeepLinkHosts`
+// se ignora silenciosamente. El whitelist limita la superficie de
+// ataque y mantiene el contrato en sync con el enum `AppRoute`.
+//
+// **Traducción de host → path:**
+//   - `zeiki://login` → `/login`
+//   - `io.supabase.flutter://verify-email` → `/auth/verify-email`
+//   - `io.supabase.flutter://reset-password` → `/auth/reset-password`
 //
 // La función `wireDeepLinks` devuelve una `StreamSubscription` que el
 // caller debe cancelar cuando la app se cierre (en `main.dart` no es
@@ -20,9 +36,19 @@ import 'package:app_links/app_links.dart';
 import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
 
-/// Hosts válidos de deep link `zeiki://<host>` (Housekeeping bundle #3,
-/// fix #14). Cualquier host fuera de este set se ignora silenciosamente
-/// y se loggea con `debugPrint`.
+/// Schemes válidos de deep link de Zeiki.
+///
+/// - `zeiki`: scheme interno de navegación (HDU-004).
+/// - `io.supabase.flutter`: scheme que Supabase usa en los emails de
+///   confirmación y reset password (HDU-007). El mismo que usaba el
+///   legacy `seiki_app` para deep links custom sin App Links.
+const _allowedDeepLinkSchemes = <String>{
+  'zeiki',
+  'io.supabase.flutter',
+};
+
+/// Hosts válidos de deep link. Cualquier host fuera de este set se
+/// ignora silenciosamente y se loggea con `debugPrint`.
 ///
 /// **Por qué existe:** antes, `zeikiUriToPath` aceptaba CUALQUIER host
 /// (`zeiki://admin`, `zeiki://../etc`), lo que permitía que un intent
@@ -41,21 +67,36 @@ const _allowedDeepLinkHosts = <String>{
   'register',
   'unlock',
   'home',
+  'verify-email',
+  'reset-password',
 };
 
-/// Traduce una URI de deep link `zeiki://<host>` al path interno
-/// `/<host>`. Devuelve `null` si la URI no es del esquema `zeiki`, si
-/// el host está vacío, o si el host no está en el whitelist
-/// `_allowedDeepLinkHosts` — el caller decide qué hacer (típicamente:
-/// ignorar).
+/// Mapeo de host → path interno del router. Solo los hosts de Supabase
+/// (`io.supabase.flutter://...`) necesitan traducción porque usan un
+/// path distinto al del host. Los hosts internos de `zeiki://` mapean
+/// 1:1 (`host` → `/host`).
 ///
-/// **Defensa en profundidad (bundle #3, fix #14):** un intent
-/// `zeiki://admin` (host no whitelisted) NO navega a `/admin`, aunque
-/// la app esté construida con un router permisivo. Esto reduce la
-/// superficie de ataque si en el futuro se agregan rutas
+/// Por ejemplo:
+///   - `io.supabase.flutter://verify-email` → `/auth/verify-email`
+///   - `io.supabase.flutter://reset-password` → `/auth/reset-password`
+const _supabaseHostToPath = <String, String>{
+  'verify-email': '/auth/verify-email',
+  'reset-password': '/auth/reset-password',
+};
+
+/// Traduce una URI de deep link al path interno del router. Acepta
+/// schemes `zeiki://<host>` y `io.supabase.flutter://<host>`. Devuelve
+/// `null` si el scheme no es válido, si el host está vacío, o si el
+/// host no está en el whitelist `_allowedDeepLinkHosts` — el caller
+/// decide qué hacer (típicamente: ignorar).
+///
+/// **Defensa en profundidad (bundle #3, fix #14 + HDU-007):** un
+/// intent `zeiki://admin` (host no whitelisted) NO navega a `/admin`,
+/// aunque la app esté construida con un router permisivo. Esto reduce
+/// la superficie de ataque si en el futuro se agregan rutas
 /// privilegiadas (ej. `/admin`, `/debug`).
 String? zeikiUriToPath(Uri uri) {
-  if (uri.scheme != 'zeiki') return null;
+  if (!_allowedDeepLinkSchemes.contains(uri.scheme)) return null;
   final host = uri.host;
   if (host.isEmpty) return null;
   if (!_allowedDeepLinkHosts.contains(host)) {
@@ -65,12 +106,18 @@ String? zeikiUriToPath(Uri uri) {
     );
     return null;
   }
+  // Hosts de Supabase (io.supabase.flutter://<host>) necesitan
+  // traducción: el path interno es /auth/<host>, no /<host>.
+  // Hosts de zeiki://<host> mapean 1:1.
+  if (uri.scheme == 'io.supabase.flutter') {
+    return _supabaseHostToPath[host] ?? '/$host';
+  }
   return '/$host';
 }
 
 /// Suscribe el router a un `Stream<Uri>` (típicamente el de `app_links`)
-/// y navega cuando llega un deep link `zeiki://<ruta>`. Las URIs que
-/// no son del esquema `zeiki` se ignoran.
+/// y navega cuando llega un deep link válido. Las URIs que no son
+/// de los schemes aceptados o tienen hosts no whitelisted se ignoran.
 StreamSubscription<Uri> wireDeepLinks(
   GoRouter router,
   Stream<Uri> uriStream,
