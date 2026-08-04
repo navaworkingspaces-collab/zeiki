@@ -88,7 +88,7 @@ Agregar 2 rutas al enum `AppRoute` y al builder:
 - `AppRoute.verifyEmail` → `/auth/verify-email`
 - `AppRoute.resetPassword` → `/auth/reset-password`
 
-Ambas rutas son **públicas** (sin sesión, como `/login` y `/register`), porque el user llega ahí sin estar autenticado.
+Ambas rutas son **terminales** (como `/unlock`), no públicas. Razón: cuando llega el deep link de reset password, Supabase crea una sesión temporal al procesar el token (necesaria para que `updateUser` funcione en `ResetPasswordScreen`). Si el redirect las tratara como `/login` y las mandara a `/home` con esa sesión temporal, el user nunca vería la pantalla de reset. Lo mismo aplica a verify-email: el user debe ver el mensaje de éxito ANTES de cualquier redirección (la sesión puede no existir aún, o existir como temporal). Decisión técnica: `lib/core/router/app_router.dart:38-53` (bloque de cambios de HDU-007 en la cabecera del archivo).
 
 ### 6. `lib/features/identidad/screens/reset_password_screen.dart` (NUEVO)
 
