@@ -36,12 +36,13 @@ import 'package:go_router/go_router.dart';
 
 import 'core/auth/auth_service.dart';
 import 'core/auth/auth_service_config.dart';
-import 'core/services/biometric_service.dart';
 import 'core/auth/inactivity_monitor.dart';
+import 'core/auth/password_recovery_listener.dart';
 import 'core/constants/env_config.dart';
 import 'core/di/service_locator.dart';
 import 'core/router/app_links_handler.dart';
 import 'core/router/app_router.dart';
+import 'core/services/biometric_service.dart';
 import 'core/supabase/supabase_client.dart';
 import 'core/tiers/tier_service.dart';
 import 'features/identidad/blocs/splash_cubit.dart';
@@ -97,6 +98,17 @@ Future<void> main() async {
   final auth = getIt<AuthService>();
   final biometric = getIt<BiometricService>();
   final router = getIt<GoRouter>();
+
+  // HDU-007 — disparar la factory del listener de `passwordRecovery`.
+  // La factory es lazy (se registra en `setupServiceLocator`); la
+  // disparamos explícitamente aquí para que la suscripción a
+  // `authStateChanges` quede activa antes del primer frame y pueda
+  // reaccionar al deep link de reset password. Ver
+  // `lib/core/auth/password_recovery_listener.dart` para la
+  // motivación completa (red de seguridad del race condition entre
+  // `onAuthStateChange` y `wireAppLinksDeepLinks`).
+  getIt<PasswordRecoveryListener>();
+
   final session = auth.getCurrentSession();
   if (session != null) {
     final userId = auth.currentUserId;
