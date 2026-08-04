@@ -29,6 +29,15 @@ enum AuthErrorKind {
 
   /// El correo existe pero no se ha confirmado. La UI sugiere reenviar
   /// el correo de confirmación.
+  ///
+  /// **HDU-007 (cambio de scope):** antes era código defensivo sin
+  /// uso real (BUG-002 lo había abortado). Con HDU-007, el flujo de
+  /// confirmación de email + deep link custom está implementado, así
+  /// que este `kind` **sí se usa**: cuando un user intenta hacer
+  /// signIn sin haber confirmado el email, Supabase rechaza con
+  /// "Email not confirmed", el mapper lo clasifica como
+  /// `emailNotConfirmed`, y la UI muestra el mensaje
+  /// "Necesitas confirmar tu correo antes de iniciar sesión."
   emailNotConfirmed,
 
   /// Red caída o timeout. La UI sugiere "revisa tu conexión".

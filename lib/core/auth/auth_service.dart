@@ -1,4 +1,5 @@
-// Servicio de autenticación de Zeiki (HDU-005, AC1, AC3).
+// Servicio de autenticación de Zeiki (HDU-005, AC1, AC3; HDU-007
+// extiende con email callback flow).
 //
 // `AuthService` es la **única** puerta de entrada al sistema de auth
 // para las features. Envuelve `supabase.auth` y:
@@ -8,6 +9,10 @@
 //     `signInWithIdToken`).
 //   - Expone una API síncrona para el redirect del router
 //     (`getCurrentSession()`).
+//   - Maneja el deep link de Supabase (`emailRedirectTo` en
+//     signUp + `redirectTo` en resetPasswordForEmail) para que el
+//     link de confirmación y el de reset password abran la app
+//     directamente (HDU-007, AC1, AC7).
 //
 // **Regla arquitectónica (Target §6):** los features consumen
 // `AuthService` desde GetIt, NUNCA `Supabase.instance.client.auth`
@@ -48,6 +53,7 @@ class UserCancelledAuthFlow implements Exception {
 typedef SignUpWithEmailFn = Future<sb.AuthResponse> Function({
   required String email,
   required String password,
+  String? emailRedirectTo,
 });
 typedef SignInWithEmailFn = Future<sb.AuthResponse> Function({
   required String email,
@@ -60,6 +66,23 @@ typedef SignInWithIdTokenFn = Future<sb.AuthResponse> Function({
   String? nonce,
 });
 typedef SignOutFn = Future<void> Function();
+
+/// HDU-007: dispara el email de reset password. El default apunta el
+/// link a `io.supabase.flutter://reset-password/` (deep link custom,
+/// mismo scheme que usaba el legacy — ver
+/// `specs/HDU-007-email-callback-flow.md` §1 y `app_links_handler.dart`).
+typedef ResetPasswordForEmailFn = Future<void> Function(
+  String email, {
+  String? redirectTo,
+});
+
+/// HDU-007: cambia la password del usuario actual. Necesita sesión
+/// activa (típicamente la sesión temporal que Supabase crea al
+/// procesar el deep link de recovery).
+typedef UpdateUserPasswordFn = Future<sb.UserResponse> Function(
+  sb.UserAttributes attributes,
+);
+
 typedef GetSessionFn = sb.Session? Function();
 typedef AuthStateChangeFn = Stream<sb.AuthState> Function();
 
@@ -78,6 +101,8 @@ class AuthService {
     SignInWithEmailFn? signInWithEmailFn,
     SignInWithIdTokenFn? signInWithIdTokenFn,
     SignOutFn? signOutFn,
+    ResetPasswordForEmailFn? resetPasswordForEmailFn,
+    UpdateUserPasswordFn? updateUserPasswordFn,
     GetSessionFn? getCurrentSessionFn,
     AuthStateChangeFn? authStateChangeFn,
     GoogleSignInHandler? googleSignInHandler,
@@ -85,6 +110,10 @@ class AuthService {
         _signInWithEmailFn = signInWithEmailFn ?? _defaultSignInWithEmail,
         _signInWithIdTokenFn = signInWithIdTokenFn ?? _defaultSignInWithIdToken,
         _signOutFn = signOutFn ?? _defaultSignOut,
+        _resetPasswordForEmailFn =
+            resetPasswordForEmailFn ?? _defaultResetPasswordForEmail,
+        _updateUserPasswordFn =
+            updateUserPasswordFn ?? _defaultUpdateUserPassword,
         _getCurrentSessionFn =
             getCurrentSessionFn ?? _defaultGetCurrentSession,
         _authStateChangeFn = authStateChangeFn ?? _defaultAuthStateChange,
@@ -94,6 +123,8 @@ class AuthService {
   final SignInWithEmailFn _signInWithEmailFn;
   final SignInWithIdTokenFn _signInWithIdTokenFn;
   final SignOutFn _signOutFn;
+  final ResetPasswordForEmailFn _resetPasswordForEmailFn;
+  final UpdateUserPasswordFn _updateUserPasswordFn;
   final GetSessionFn _getCurrentSessionFn;
   final AuthStateChangeFn _authStateChangeFn;
   final GoogleSignInHandler? _googleSignInHandler;
@@ -106,12 +137,21 @@ class AuthService {
   /// `AuthException(emailAlreadyInUse)` si el correo ya está
   /// registrado, `AuthException(weakPassword)` si Supabase rechaza la
   /// contraseña.
+  ///
+  /// **HDU-007 (AC1):** pasa `emailRedirectTo: io.supabase.flutter://verify-email/`
+  /// al callback de Supabase. Sin esto, Supabase usa el redirect default
+  /// del proyecto (típicamente `localhost:3000`) y el link de confirmación
+  /// no abre la app — el user queda en limbo sin poder confirmar.
   Future<AuthResult> signUpWithEmail({
     required String email,
     required String password,
   }) async {
     try {
-      return await _signUpWithEmailFn(email: email, password: password);
+      return await _signUpWithEmailFn(
+        email: email,
+        password: password,
+        emailRedirectTo: 'io.supabase.flutter://verify-email/',
+      );
     } catch (e) {
       throw mapSupabaseAuthError(e);
     }
@@ -190,6 +230,48 @@ class AuthService {
     }
   }
 
+  /// HDU-007 (AC6, AC7): envía un email al user con un link de reset
+  /// de password. El link apunta al deep link
+  /// `io.supabase.flutter://reset-password/`. Cuando el user hace
+  /// click, la app abre directamente en la pantalla de reset
+  /// (`/auth/reset-password`).
+  ///
+  /// Lanza `AuthException(unknown)` si Supabase rechaza el request
+  /// (ej. rate limit, email no registrado). Mapea el error a un
+  /// mensaje en español accionable.
+  Future<void> resetPasswordForEmail({required String email}) async {
+    try {
+      await _resetPasswordForEmailFn(
+        email,
+        redirectTo: 'io.supabase.flutter://reset-password/',
+      );
+    } catch (e) {
+      throw mapSupabaseAuthError(e);
+    }
+  }
+
+  /// HDU-007 (AC9): cambia la password del usuario actual. Se llama
+  /// desde `ResetPasswordScreen` después de que el user llena los
+  /// campos de nueva password + confirmación.
+  ///
+  /// **Requiere sesión activa.** Cuando el user llega vía deep link,
+  /// Supabase crea una sesión temporal al procesar el token; el
+  /// `updateUser` la usa. Si no hay sesión, Supabase rechaza con
+  /// "Auth session missing" — el mapper lo convierte a
+  /// `AuthException(unknown)` y la UI muestra "Algo salió mal.
+  /// Intenta de nuevo."
+  Future<sb.UserResponse> updateUserPassword({
+    required String newPassword,
+  }) async {
+    try {
+      return await _updateUserPasswordFn(
+        sb.UserAttributes(password: newPassword),
+      );
+    } catch (e) {
+      throw mapSupabaseAuthError(e);
+    }
+  }
+
   /// Devuelve la sesión activa o `null`. Se llama desde el `redirect`
   /// del router para decidir a dónde mandar al usuario.
   sb.Session? getCurrentSession() => _getCurrentSessionFn();
@@ -215,10 +297,12 @@ class AuthService {
 Future<sb.AuthResponse> _defaultSignUpWithEmail({
   required String email,
   required String password,
+  String? emailRedirectTo,
 }) {
   return sb.Supabase.instance.client.auth.signUp(
     email: email,
     password: password,
+    emailRedirectTo: emailRedirectTo,
   );
 }
 
@@ -248,6 +332,22 @@ Future<sb.AuthResponse> _defaultSignInWithIdToken({
 
 Future<void> _defaultSignOut() async {
   await sb.Supabase.instance.client.auth.signOut();
+}
+
+Future<void> _defaultResetPasswordForEmail(
+  String email, {
+  String? redirectTo,
+}) {
+  return sb.Supabase.instance.client.auth.resetPasswordForEmail(
+    email,
+    redirectTo: redirectTo,
+  );
+}
+
+Future<sb.UserResponse> _defaultUpdateUserPassword(
+  sb.UserAttributes attributes,
+) {
+  return sb.Supabase.instance.client.auth.updateUser(attributes);
 }
 
 sb.Session? _defaultGetCurrentSession() {

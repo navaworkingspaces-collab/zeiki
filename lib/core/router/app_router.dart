@@ -1,5 +1,6 @@
 // Router declarativo de Zeiki (HDU-004 base, HDU-005 extiende, HDU-005b
-// biometría + unlock, HDU-006 splash real).
+// biometría + unlock, HDU-006 splash real, HDU-007 email callback
+// flow con deep links).
 import 'dart:async';
 //
 // Cambios de HDU-005:
@@ -34,6 +35,23 @@ import 'dart:async';
 //     máquina de estados del splash (loading → ready → hidden) sea
 //     inyectable y testeable.
 //
+// Cambios de HDU-007 (esta HDU):
+//   - **2 rutas nuevas para deep links de Supabase:**
+//     `/auth/verify-email` (AC3) y `/auth/reset-password` (AC8).
+//   - **Ambas son terminales** (como `/unlock`): el redirect NO las
+//     redirige, independientemente de si hay sesión o no.
+//
+//     **Por qué terminales y no "como /login" (que sí redirige a
+//     /home con sesión activa):** el flujo de Supabase para reset
+//     password crea una sesión temporal al procesar el deep link
+//     (necesaria para que `updateUser` funcione). Si el redirect la
+//     tratara como /login, sacaría al user a /home antes de que
+//     pueda cambiar la password. Lo mismo aplica a verify-email:
+//     el user debe ver el mensaje de éxito ANTES de cualquier
+//     redirección. La spec (§5) sugiere "como /login", pero el
+//     comportamiento real de Supabase requiere terminales — esta es
+//     una excepción documentada.
+//
 // **Por qué el redirect NO consulta biometricEnabled:** el redirect
 // aplica a CADA navegación, no solo al cold start. Si el user está
 // en /home, hace logout, y va a /login, el redirect NO debe
@@ -50,22 +68,28 @@ import '../../features/identidad/blocs/splash_cubit.dart';
 import '../../features/identidad/screens/home_screen.dart';
 import '../../features/identidad/screens/login_screen.dart';
 import '../../features/identidad/screens/register_screen.dart';
+import '../../features/identidad/screens/reset_password_screen.dart';
 import '../../features/identidad/screens/splash_screen.dart';
 import '../../features/identidad/screens/unlock_screen.dart';
+import '../../features/identidad/screens/verify_email_screen.dart';
 import 'screens/onboarding_placeholder.dart';
 
 /// Rutas declaradas por el router. El `.path` es lo que se usa en
 /// `context.go(...)` y en `findMatch(route: ...)`.
 ///
 /// **HDU-005** agregó `register`. **HDU-005b** agrega `unlock` para el
-/// cold start con sesión + biometría habilitada.
+/// cold start con sesión + biometría habilitada. **HDU-007** agrega
+/// `verifyEmail` y `resetPassword` para los deep links de Supabase
+/// (email confirmation + reset password).
 enum AppRoute {
   splash('/splash'),
   onboarding('/onboarding'),
   login('/login'),
   register('/register'),
   unlock('/unlock'),
-  home('/home');
+  home('/home'),
+  verifyEmail('/auth/verify-email'),
+  resetPassword('/auth/reset-password');
 
   const AppRoute(this.path);
 
@@ -76,17 +100,21 @@ enum AppRoute {
 /// sin montar un widget tree (conventions §3: unit test cuando el
 /// comportamiento es puro).
 ///
-/// **Reglas (AC24, HDU-005b):**
+/// **Reglas (AC24, HDU-005b, HDU-007):**
 ///   - `/splash`, `/onboarding` → nunca redirigen (públicas).
 ///   - `/login`, `/register`    → redirigen a `/home` si hay sesión.
 ///   - `/unlock`                → terminal; el `UnlockScreen`
 ///                                decide internamente.
+///   - `/auth/verify-email`,
+///     `/auth/reset-password`   → terminales (HDU-007). Ver bloque de
+///                                cambios HDU-007 en la cabecera de
+///                                este archivo para el porqué técnico.
 ///   - Rutas privadas (`/home` y futuras) sin sesión → `/login`.
 ///
 /// **No hay loops infinitos:** el `redirect` de `go_router` deja de
 /// llamar a la función cuando el resultado es `null`. Las reglas
 /// anteriores garantizan que `/login` sin sesión, `/home` con sesión,
-/// y `/unlock` siempre son terminales.
+/// `/unlock` y las 2 rutas de HDU-007 siempre son terminales.
 String? computeAuthRedirect({
   required String goingTo,
   required bool isLoggedIn,
@@ -98,8 +126,9 @@ String? computeAuthRedirect({
   if (goingTo == AppRoute.login.path || goingTo == AppRoute.register.path) {
     return isLoggedIn ? AppRoute.home.path : null;
   }
-  if (goingTo == AppRoute.unlock.path) {
-    // El UnlockScreen decide internamente; no redirigimos.
+  if (goingTo == AppRoute.unlock.path ||
+      goingTo == AppRoute.verifyEmail.path ||
+      goingTo == AppRoute.resetPassword.path) {
     return null;
   }
   // Rutas privadas (incluyendo /home y futuras como /fiscal).
@@ -215,6 +244,16 @@ GoRouter buildAppRouter({
         path: AppRoute.home.path,
         builder: (BuildContext context, GoRouterState state) =>
             const HomeScreen(),
+      ),
+      GoRoute(
+        path: AppRoute.verifyEmail.path,
+        builder: (BuildContext context, GoRouterState state) =>
+            const VerifyEmailScreen(),
+      ),
+      GoRoute(
+        path: AppRoute.resetPassword.path,
+        builder: (BuildContext context, GoRouterState state) =>
+            const ResetPasswordScreen(),
       ),
     ],
     redirect: (BuildContext context, GoRouterState state) {

@@ -104,7 +104,9 @@ class _NullAuthServiceForTest implements AuthService {
 
   @override
   Future<sb.AuthResponse> signUpWithEmail(
-          {required String email, required String password}) =>
+          {required String email,
+          required String password,
+          String? emailRedirectTo}) =>
       throw UnimplementedError();
 
   @override
@@ -117,6 +119,15 @@ class _NullAuthServiceForTest implements AuthService {
 
   @override
   Future<void> signOut() => throw UnimplementedError();
+
+  // HDU-007: stubs mínimos. No usados en este integration test.
+  @override
+  Future<void> resetPasswordForEmail({required String email}) =>
+      throw UnimplementedError();
+
+  @override
+  Future<sb.UserResponse> updateUserPassword({required String newPassword}) =>
+      throw UnimplementedError();
 }
 
 /// Fake de `BiometricService` para el integration test. Devuelve

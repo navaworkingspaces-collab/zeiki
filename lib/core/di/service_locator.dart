@@ -19,10 +19,11 @@ import 'package:get_it/get_it.dart';
 import 'package:go_router/go_router.dart';
 
 import '../auth/auth_service.dart';
-import '../services/biometric_service.dart';
 import '../auth/google_sign_in_handler.dart';
+import '../auth/password_recovery_listener.dart';
 import '../constants/env_config.dart';
 import '../router/app_router.dart';
+import '../services/biometric_service.dart';
 import '../tiers/tier_service.dart';
 
 /// Instancia global de GetIt. Acceso desde features:
@@ -140,6 +141,26 @@ void setupServiceLocator(EnvConfig env) {
     () => buildAppRouter(
       authServiceGetter: () => getIt<AuthService>(),
       refreshStream: getIt<AuthService>().authStateChanges,
+    ),
+  );
+
+  // HDU-007 — listener de `passwordRecovery` (red de seguridad del
+  // deep link de reset password). Ver
+  // `lib/core/auth/password_recovery_listener.dart` para la
+  // motivación completa. Se registra como `LazySingleton` e
+  // implementa `Disposable` para que `getIt.reset()` (en los
+  // `tearDown` de los tests) cancele la suscripción limpiamente. La
+  // factory NO se dispara aquí — `main.dart` la dispara
+  // explícitamente con `getIt<PasswordRecoveryListener>()` DESPUÉS
+  // de `getIt<GoRouter>()` para que la suscripción quede activa antes
+  // del primer frame. Si la disparáramos aquí, los tests que llaman
+  // `setupServiceLocator` sin tener Supabase inicializado (ej.
+  // `service_locator_test.dart`) crashearían en la factory chain
+  // (`GoRouter` → `authStateChanges` → `Supabase.instance.client.auth`).
+  registerLazySingletonIfNotRegistered<PasswordRecoveryListener>(
+    () => PasswordRecoveryListener(
+      auth: getIt<AuthService>(),
+      router: getIt<GoRouter>(),
     ),
   );
 }

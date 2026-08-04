@@ -99,10 +99,10 @@ void main() {
     });
   });
 
-  group('AppRoute enum (HDU-004 + HDU-005 + HDU-005b)', () {
-    test('declara las 6 rutas (HDU-004 + /register HDU-005 + /unlock HDU-005b)',
-        () {
-      expect(AppRoute.values, hasLength(6));
+  group('AppRoute enum (HDU-004 + HDU-005 + HDU-005b + HDU-007)', () {
+    test('declara las 8 rutas (HDU-004 + /register HDU-005 + /unlock HDU-005b '
+        '+ /auth/verify-email + /auth/reset-password HDU-007)', () {
+      expect(AppRoute.values, hasLength(8));
       expect(
         AppRoute.values.map((r) => r.path).toSet(),
         {
@@ -112,6 +112,8 @@ void main() {
           '/register',
           '/unlock',
           '/home',
+          '/auth/verify-email',
+          '/auth/reset-password',
         },
       );
     });
@@ -125,8 +127,8 @@ void main() {
       );
     });
 
-    test('cada AppRoute path resuelve sin error (HDU-004 + HDU-005 + HDU-005b)',
-        () {
+    test('cada AppRoute path resuelve sin error (HDU-004 + HDU-005 + HDU-005b '
+        '+ HDU-007)', () {
       for (final route in AppRoute.values) {
         final match = router.configuration.findMatch(Uri.parse(route.path));
         expect(
@@ -143,6 +145,24 @@ void main() {
       expect(matchList.isError, isFalse,
           reason: 'HDU-005b: /unlock debe existir para el cold start con '
               'sesión + biometría');
+      expect(matchList.matches, isNotEmpty);
+    });
+
+    test('resuelve /auth/verify-email sin error (HDU-007, AC3)', () {
+      final matchList = router.configuration
+          .findMatch(Uri.parse('/auth/verify-email'));
+      expect(matchList.isError, isFalse,
+          reason: 'HDU-007: el deep link de email confirmation debe '
+              'enrutar a /auth/verify-email');
+      expect(matchList.matches, isNotEmpty);
+    });
+
+    test('resuelve /auth/reset-password sin error (HDU-007, AC8)', () {
+      final matchList = router.configuration
+          .findMatch(Uri.parse('/auth/reset-password'));
+      expect(matchList.isError, isFalse,
+          reason: 'HDU-007: el deep link de reset password debe '
+              'enrutar a /auth/reset-password');
       expect(matchList.matches, isNotEmpty);
     });
   });
@@ -204,6 +224,7 @@ class _FakeAuthService implements AuthService {
   Future<sb.AuthResponse> signUpWithEmail({
     required String email,
     required String password,
+    String? emailRedirectTo,
   }) async =>
       throw const AuthException(
         kind: AuthErrorKind.unknown,
@@ -225,6 +246,27 @@ class _FakeAuthService implements AuthService {
         kind: AuthErrorKind.unknown,
         message: 'not used in app_router_test',
       );
+
+  // HDU-007: reset password + update user password. No se usan en
+  // este test (cubre solo resolución de rutas), pero el `implements`
+  // exige que estén.
+  @override
+  Future<void> resetPasswordForEmail({required String email}) async {
+    throw const AuthException(
+      kind: AuthErrorKind.unknown,
+      message: 'not used in app_router_test',
+    );
+  }
+
+  @override
+  Future<sb.UserResponse> updateUserPassword({
+    required String newPassword,
+  }) async {
+    throw const AuthException(
+      kind: AuthErrorKind.unknown,
+      message: 'not used in app_router_test',
+    );
+  }
 
   // (hasGoogleHandler removido en cleanup HDU-005, ver auth_service.dart)
 }

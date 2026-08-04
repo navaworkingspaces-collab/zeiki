@@ -72,6 +72,50 @@ void main() {
       // Cubre el host agregado por HDU-005b.
       expect(zeikiUriToPath(Uri.parse('zeiki://unlock')), '/unlock');
     });
+
+    // HDU-007: el flujo de email confirmation + reset password usa
+    // scheme `io.supabase.flutter://` (knowledge reuse del legacy,
+    // ver `specs/HDU-007-email-callback-flow.md` §1). El handler
+    // acepta ese scheme además de `zeiki://` para enrutar la app a
+    // las pantallas de verify-email y reset-password.
+    test('io.supabase.flutter://verify-email → /auth/verify-email (HDU-007, '
+        'AC2, AC3)', () {
+      expect(
+        zeikiUriToPath(Uri.parse('io.supabase.flutter://verify-email')),
+        '/auth/verify-email',
+      );
+    });
+
+    test('io.supabase.flutter://reset-password → /auth/reset-password '
+        '(HDU-007, AC8)', () {
+      expect(
+        zeikiUriToPath(Uri.parse('io.supabase.flutter://reset-password')),
+        '/auth/reset-password',
+      );
+    });
+
+    test('io.supabase.flutter://login-callback → null (whitelist: '
+        'host existe en el manifest pero NO enrutamos porque el callback '
+        'lo procesa supabase_flutter internamente)', () {
+      // El manifest declara el host `login-callback` para OAuth
+      // callbacks (legacy), pero el handler de Zeiki NO lo traduce a
+      // una ruta — supabase_flutter procesa ese link automáticamente
+      // vía `_startDeeplinkObserver`. Lo dejamos fuera del whitelist
+      // para que `zeikiUriToPath` lo rechace (defense in depth).
+      expect(
+        zeikiUriToPath(Uri.parse('io.supabase.flutter://login-callback')),
+        isNull,
+      );
+    });
+
+    test('https://io.supabase.flutter/verify-email → null (scheme '
+        'no permitido aunque el host sea válido)', () {
+      // El scheme es `https`, no `io.supabase.flutter`. No enrutamos.
+      expect(
+        zeikiUriToPath(Uri.parse('https://io.supabase.flutter/verify-email')),
+        isNull,
+      );
+    });
   });
 
   group('wireDeepLinks', () {

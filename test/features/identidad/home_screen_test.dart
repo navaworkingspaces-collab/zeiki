@@ -155,6 +155,7 @@ class _FakeAuthService implements AuthService {
   Future<sb.AuthResponse> signUpWithEmail({
     required String email,
     required String password,
+    String? emailRedirectTo,
   }) async {
     signUpCalls++;
     if (signUpError != null) throw mapSupabaseAuthError(signUpError!);
@@ -193,6 +194,25 @@ class _FakeAuthService implements AuthService {
     signOutCalls++;
     if (signOutError != null) throw mapSupabaseAuthError(signOutError!);
     session = null;
+  }
+
+  // HDU-007: el home no usa estos métodos, pero el `implements`
+  // exige la firma. Stubs mínimos.
+  @override
+  Future<void> resetPasswordForEmail({required String email}) async {}
+
+  @override
+  Future<sb.UserResponse> updateUserPassword({
+    required String newPassword,
+  }) async {
+    return sb.UserResponse.fromJson(<String, dynamic>{
+      'id': 'user-1',
+      'aud': 'authenticated',
+      'app_metadata': const <String, dynamic>{},
+      'user_metadata': const <String, dynamic>{},
+      'created_at': DateTime.now().toIso8601String(),
+      'email': 'hugo@zeiki.app',
+    });
   }
 
   @override

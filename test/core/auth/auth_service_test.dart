@@ -67,6 +67,8 @@ void main() {
       signInWithEmailFn: stubs.signInWithEmail,
       signInWithIdTokenFn: stubs.signInWithIdToken,
       signOutFn: stubs.signOut,
+      resetPasswordForEmailFn: stubs.resetPasswordForEmail,
+      updateUserPasswordFn: stubs.updateUser,
       getCurrentSessionFn: stubs.getCurrentSession,
       authStateChangeFn: stubs.authStateChange,
       googleSignInHandler: googleHandler ?? const GoogleSignInHandler(),
@@ -87,6 +89,26 @@ void main() {
       expect(stubs.signUpCalls, 1);
       expect(stubs.signUpLastEmail, 'hugo@zeiki.app');
       expect(stubs.signUpLastPassword, 'secret-pass-1');
+    });
+
+    test(
+        'pasa emailRedirectTo al callback de Supabase (HDU-007, AC1) → link '
+        'debe apuntar a io.supabase.flutter://verify-email/', () async {
+      stubs.signUpResult = fakeAuthResponse(email: 'hugo@zeiki.app');
+      final service = makeService();
+
+      await service.signUpWithEmail(
+        email: 'hugo@zeiki.app',
+        password: 'secret-pass-1',
+      );
+
+      // Verifica que el service pasa el `emailRedirectTo` correcto al
+      // callback. Sin esto, Supabase usa el default del proyecto
+      // (localhost:3000) y el link de confirmación no abre la app.
+      expect(
+        stubs.signUpLastEmailRedirectTo,
+        'io.supabase.flutter://verify-email/',
+      );
     });
 
     test('email duplicado → lanza AuthException(emailAlreadyInUse) (AC7)',
@@ -208,6 +230,54 @@ void main() {
     });
   });
 
+  group('resetPasswordForEmail (HDU-007, AC6)', () {
+    test('éxito → llama a la función inyectada con el email', () async {
+      final service = makeService();
+
+      await service.resetPasswordForEmail(email: 'hugo@zeiki.app');
+
+      expect(stubs.resetPasswordCalls, 1);
+      expect(stubs.resetPasswordLastEmail, 'hugo@zeiki.app');
+    });
+
+    test('error del servicio → lanza AuthException(unknown)', () async {
+      // El mapper por default convierte excepciones desconocidas a
+      // `AuthException(kind: unknown)`. Aquí verificamos que el service
+      // propaga el mapeo (no la excepción cruda).
+      stubs.resetPasswordError = Exception('rate limit exceeded');
+      final service = makeService();
+
+      await expectLater(
+        service.resetPasswordForEmail(email: 'hugo@zeiki.app'),
+        throwsA(isA<AuthException>()),
+      );
+      expect(stubs.resetPasswordCalls, 1);
+    });
+  });
+
+  group('updateUserPassword (HDU-007, AC9)', () {
+    test('éxito → llama a la función inyectada con el nuevo password',
+        () async {
+      final service = makeService();
+
+      await service.updateUserPassword(newPassword: 'new-secret-pass-9');
+
+      expect(stubs.updateUserPasswordCalls, 1);
+      expect(stubs.updateUserPasswordLastPassword, 'new-secret-pass-9');
+    });
+
+    test('error del servicio → lanza AuthException mapeada', () async {
+      stubs.updateUserPasswordError = Exception('session expired');
+      final service = makeService();
+
+      await expectLater(
+        service.updateUserPassword(newPassword: 'new-secret-pass-9'),
+        throwsA(isA<AuthException>()),
+      );
+      expect(stubs.updateUserPasswordCalls, 1);
+    });
+  });
+
   group('getCurrentSession', () {
     test('sin sesión guardada → devuelve null', () {
       stubs.session = null;
@@ -274,15 +344,18 @@ class _SupabaseStubs {
   int signUpCalls = 0;
   String? signUpLastEmail;
   String? signUpLastPassword;
+  String? signUpLastEmailRedirectTo;
   Object? signUpError;
   sb.AuthResponse? signUpResult;
   Future<sb.AuthResponse> signUpWithEmail({
     required String email,
     required String password,
+    String? emailRedirectTo,
   }) async {
     signUpCalls++;
     signUpLastEmail = email;
     signUpLastPassword = password;
+    signUpLastEmailRedirectTo = emailRedirectTo;
     if (signUpError != null) throw signUpError!;
     return signUpResult ?? fakeAuthResponse();
   }
@@ -325,6 +398,36 @@ class _SupabaseStubs {
   Future<void> signOut() async {
     signOutCalls++;
     if (signOutError != null) throw signOutError!;
+  }
+
+  // resetPasswordForEmail (HDU-007, AC6)
+  int resetPasswordCalls = 0;
+  String? resetPasswordLastEmail;
+  Object? resetPasswordError;
+  Future<void> resetPasswordForEmail(String email, {String? redirectTo}) async {
+    resetPasswordCalls++;
+    resetPasswordLastEmail = email;
+    if (resetPasswordError != null) throw resetPasswordError!;
+  }
+
+  // updateUserPassword (HDU-007, AC9)
+  int updateUserPasswordCalls = 0;
+  String? updateUserPasswordLastPassword;
+  Object? updateUserPasswordError;
+  Future<sb.UserResponse> updateUser(sb.UserAttributes attributes) async {
+    updateUserPasswordCalls++;
+    updateUserPasswordLastPassword = attributes.password;
+    if (updateUserPasswordError != null) throw updateUserPasswordError!;
+    // Devolvemos un UserResponse mínimo vía fromJson. Los features no
+    // leen la respuesta, solo necesitan que el tipo se satisfaga.
+    return sb.UserResponse.fromJson(<String, dynamic>{
+      'id': 'user-id-1',
+      'aud': 'authenticated',
+      'app_metadata': const <String, dynamic>{},
+      'user_metadata': const <String, dynamic>{},
+      'created_at': DateTime.now().toIso8601String(),
+      'email': 'hugo@zeiki.app',
+    });
   }
 
   // getCurrentSession
