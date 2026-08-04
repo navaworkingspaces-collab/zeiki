@@ -7,13 +7,11 @@
 // `/auth/reset-password` y el router (`app_router.dart`) renderiza
 // esta pantalla.
 //
-// **Por qué esta pantalla existe como ruta independiente y no como
-// bottom sheet sobre /login:** la ruta es terminal (el redirect NO
-// la redirige aunque haya sesión activa). Esto es necesario porque
-// Supabase crea una sesión temporal al procesar el deep link — si el
-// redirect la tratara como /login, sacaría al user a /home antes de
-// que pueda cambiar la password. Ver el comentario de HDU-007 en
-// `app_router.dart` para más detalle.
+// **Por qué la ruta es terminal** (no redirige aunque haya sesión
+// activa): ver el bloque de cambios HDU-007 en la cabecera de
+// `app_router.dart`. Resumen: Supabase crea una sesión temporal al
+// procesar el deep link y el redirect debe dejarnos terminar el
+// cambio de password antes de movernos a /home.
 //
 // **Flujo:**
 //   1. User llena nueva password + confirmación.

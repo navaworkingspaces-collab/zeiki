@@ -13,20 +13,11 @@
 //
 // **Por qué esta pantalla existe como ruta independiente:** la spec
 // (AC3) requiere que el user vea el mensaje "Cuenta confirmada, ya
-// puedes iniciar sesión" ANTES de cualquier redirección. Si el deep
-// link procesara automáticamente (vía `onAuthStateChange` con
-// `signedIn`), la app navegaría a /home sin mostrar el mensaje. Esta
-// pantalla desacopla la confirmación visual de la sesión activa.
+// puedes iniciar sesión" ANTES de cualquier redirección. Esta pantalla
+// desacopla la confirmación visual de la sesión activa.
 //
-// **Limitación conocida:** en la implementación actual, el deep link
-// de Supabase crea una sesión temporal al procesarse (porque go_true
-// setea la sesión en `verifyOtp`). Eso significa que el `redirect`
-// del router (que consulta `getCurrentSession()`) podría sacar al
-// user de esta pantalla si la implementamos como "trátala como
-// /login". Para evitarlo, la ruta `/auth/verify-email` es **terminal**
-// (no redirige, igual que `/unlock` y `/auth/reset-password`). El
-// user debe tocar el botón para avanzar. Ver el comentario de HDU-007
-// en `app_router.dart` para más detalle.
+// **Por qué la ruta es terminal** (no redirige aunque haya sesión):
+// ver el bloque de cambios HDU-007 en la cabecera de `app_router.dart`.
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 

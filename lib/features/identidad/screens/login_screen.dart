@@ -83,9 +83,11 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // HDU-007 (AC5, AC6): dispara el email de reset password. Pide
-  // confirmación con un `showDialog` que muestra el email y un
-  // botón "Enviar". Al éxito, SnackBar "Revisa tu correo".
+  // HDU-007 (AC5, AC6): dispara el email de reset password. Al éxito,
+  // SnackBar "Revisa tu correo". El form (`_validateEmail`) ya valida
+  // el formato del email — no repetimos esa lógica aquí. Si Supabase
+  // rechaza el email (formato raro, user no existe), el error se mapea
+  // por `mapSupabaseAuthError` y se muestra en el SnackBar.
   Future<void> _onForgotPassword() async {
     final email = _emailCtrl.text.trim();
     if (email.isEmpty) {
@@ -95,14 +97,6 @@ class _LoginScreenState extends State<LoginScreen> {
             'Ingresa tu correo en el campo de arriba para enviarte el link.',
           ),
         ),
-      );
-      return;
-    }
-    // Validación rápida de formato (misma regex que el form).
-    final emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
-    if (!emailRegex.hasMatch(email)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Correo no válido.')),
       );
       return;
     }

@@ -177,6 +177,51 @@ void main() {
       expect(router.routerDelegate.currentConfiguration.uri.path, '/register');
     });
   });
+
+  // HDU-007 (AC5, AC6): "¿Olvidaste tu contraseña?" llama a
+  // `auth.resetPasswordForEmail(email)` y muestra un SnackBar de
+  // confirmación. El fake ya tiene `resetPasswordCalls` +
+  // `resetPasswordLastEmail` para verificar la llamada, y el SnackBar
+  // usa la key `forgot_password_sent` (ver `login_screen.dart:119`).
+  group('olvido de contraseña (AC5, AC6)', () {
+    testWidgets('tap con email válido → llama resetPasswordForEmail y '
+        'muestra SnackBar "Revisa tu correo"', (tester) async {
+      await pumpLoginScreen(tester);
+
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Correo'),
+        'hugo@zeiki.app',
+      );
+      await tester.tap(find.byKey(const Key('login_forgot_password')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(fakeAuth.resetPasswordCalls, 1);
+      expect(fakeAuth.resetPasswordLastEmail, 'hugo@zeiki.app');
+      expect(
+        find.byKey(const Key('forgot_password_sent')),
+        findsOneWidget,
+        reason: 'AC6: SnackBar de confirmación tras enviar el email',
+      );
+      expect(find.textContaining('Revisa tu correo'), findsOneWidget);
+    });
+
+    testWidgets('tap sin email → NO llama al servicio y muestra mensaje '
+        'accionable', (tester) async {
+      await pumpLoginScreen(tester);
+
+      await tester.tap(find.byKey(const Key('login_forgot_password')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(fakeAuth.resetPasswordCalls, 0);
+      expect(
+        find.textContaining('Ingresa tu correo'),
+        findsOneWidget,
+        reason: 'feedback al usuario cuando el campo está vacío',
+      );
+    });
+  });
 }
 
 class _FakeAuthService implements AuthService {
@@ -250,10 +295,10 @@ class _FakeAuthService implements AuthService {
     session = null;
   }
 
-  // HDU-007: reset password + update user password. El `implements`
-  // exige la firma. Los tests de login NO los usan pero el
-  // compilador los necesita. El test específico del botón
-  // "¿Olvidaste tu contraseña?" se cubre en este archivo más abajo.
+  // HDU-007: el fake implementa `resetPasswordForEmail` para que
+  // `LoginScreen` (vía `getIt<AuthService>()`) pueda llamar al
+  // servicio. Los tests del botón "¿Olvidaste tu contraseña?"
+  // están en el grupo "olvido de contraseña (AC5, AC6)" más arriba.
   int resetPasswordCalls = 0;
   String? resetPasswordLastEmail;
   @override

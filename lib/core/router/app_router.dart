@@ -106,11 +106,9 @@ enum AppRoute {
 ///   - `/unlock`                → terminal; el `UnlockScreen`
 ///                                decide internamente.
 ///   - `/auth/verify-email`,
-///     `/auth/reset-password`   → terminales (HDU-007). Ver bloque
-///                                de cambios arriba para el porqué
-///                                técnico (sesión temporal de
-///                                Supabase en reset, mensaje de
-///                                "confirmado" en verify).
+///     `/auth/reset-password`   → terminales (HDU-007). Ver bloque de
+///                                cambios HDU-007 en la cabecera de
+///                                este archivo para el porqué técnico.
 ///   - Rutas privadas (`/home` y futuras) sin sesión → `/login`.
 ///
 /// **No hay loops infinitos:** el `redirect` de `go_router` deja de
@@ -131,8 +129,6 @@ String? computeAuthRedirect({
   if (goingTo == AppRoute.unlock.path ||
       goingTo == AppRoute.verifyEmail.path ||
       goingTo == AppRoute.resetPassword.path) {
-    // Las rutas de deep link y el unlock son terminales: cada pantalla
-    // decide internamente a dónde ir (éxito, fallo, repetir, etc.).
     return null;
   }
   // Rutas privadas (incluyendo /home y futuras como /fiscal).
