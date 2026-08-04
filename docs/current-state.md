@@ -2,18 +2,17 @@
 
 > **Snapshot rápido del estado del proyecto.** Se actualiza en el cleanup (paso 12) de cada HDU cerrada. Para el detalle de una HDU específica, ver `specs/HDU-XXX-*.md`. Para el histórico, ver `.mavis/hdu.md`.
 
-**Última actualización:** 2026-08-03 (HDU-007 en implementación, sesión background con `zeiki-implementer` activa).
+**Última actualización:** 2026-08-03 (post-HDU-007 cerrada, PR #19 mergeado).
 
 ---
 
 ## 📍 Dónde estamos
 
 - **Fase:** 1 (MVP).
-- **Última unidad cerrada:** Housekeeping #18 part 1 — setup Code Magic mínimo (test workflow).
-- **HDU activa:** **HDU-007 — Flujo de confirmación de email + reset password con deep links**. Sesión background con `zeiki-implementer` corriendo.
+- **Última unidad cerrada:** HDU-007 — Flujo de confirmación de email + reset password con deep links.
+- **HDUs activas:** ninguna.
 - **BUGs activas:** ninguno.
-- **Rama `main`:** deployable.
-- **Rama de trabajo:** `feat/HDU-007-email-callback-flow`.
+- **Rama `main`:** deployable (último merge: `ee07d60` — PR #19).
 - **Stack operativo:** Flutter 3.38.3 + Supabase (proyecto Zeiki, región `us-east-2`) + Deno para edge functions.
 - **Proyecto Supabase:** ref `iocbqjzmoneulydmeavr`, URL `https://iocbqjzmoneulydmeavr.supabase.co`. Config en `assets/.env` (en `.gitignore`).
 
@@ -117,10 +116,12 @@
 
 ## 🔜 Próximos pasos sugeridos (secuencia decidida con Hugo)
 
-- **Decidir la siguiente unidad de trabajo.** Opciones:
-  - **HDU-007 / HDU-008 (feature nueva):** próximo paso del feature roadmap. Onboarding, fiscal, clientes, o descarga de CFDIs.
-  - **Housekeeping bundle #6:** quedan 3 follow-ups no bloqueantes (#10 refresh interval, #13 CLI feature_manifest, #18 CI/CD). No urge; sale cuando haya motivo.
-  - **Pausa / descanso** — la sesión ya lleva varias horas y hemos cerrado 7 HDUs + 1 BUG + 5 housekeeping bundles + 1 cierre de política.
+- **QA en Xiaomi de HDU-007** (AC11). Plan completo en `specs/HDU-007-email-callback-flow.md` §"Plan de QA".
+- Después del QA, decisión sobre la siguiente unidad:
+  - **HDU-008 (feature nueva):** descarga de CFDIs del SAT, onboarding, fiscal, o clientes.
+  - **Housekeeping bundle #6:** quedan 3 follow-ups no bloqueantes (#10, #13, #18). No urge; sale cuando haya motivo.
+  - **Polish visual + branding de pantallas** (registrado como follow-up nuevo; sale al final).
+  - **Pausa / descanso** — la sesión ha sido larga.
 
 ## 🐛 Follow-ups activos (de HDUs cerradas)
 
