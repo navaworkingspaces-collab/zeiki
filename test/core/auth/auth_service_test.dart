@@ -91,26 +91,6 @@ void main() {
       expect(stubs.signUpLastPassword, 'secret-pass-1');
     });
 
-    test(
-        'pasa emailRedirectTo al callback de Supabase (HDU-007, AC1) → link '
-        'debe apuntar a io.supabase.flutter://verify-email/', () async {
-      stubs.signUpResult = fakeAuthResponse(email: 'hugo@zeiki.app');
-      final service = makeService();
-
-      await service.signUpWithEmail(
-        email: 'hugo@zeiki.app',
-        password: 'secret-pass-1',
-      );
-
-      // Verifica que el service pasa el `emailRedirectTo` correcto al
-      // callback. Sin esto, Supabase usa el default del proyecto
-      // (localhost:3000) y el link de confirmación no abre la app.
-      expect(
-        stubs.signUpLastEmailRedirectTo,
-        'io.supabase.flutter://verify-email/',
-      );
-    });
-
     test('email duplicado → lanza AuthException(emailAlreadyInUse) (AC7)',
         () async {
       stubs.signUpError = Exception('User already registered');
@@ -344,18 +324,15 @@ class _SupabaseStubs {
   int signUpCalls = 0;
   String? signUpLastEmail;
   String? signUpLastPassword;
-  String? signUpLastEmailRedirectTo;
   Object? signUpError;
   sb.AuthResponse? signUpResult;
   Future<sb.AuthResponse> signUpWithEmail({
     required String email,
     required String password,
-    String? emailRedirectTo,
   }) async {
     signUpCalls++;
     signUpLastEmail = email;
     signUpLastPassword = password;
-    signUpLastEmailRedirectTo = emailRedirectTo;
     if (signUpError != null) throw signUpError!;
     return signUpResult ?? fakeAuthResponse();
   }

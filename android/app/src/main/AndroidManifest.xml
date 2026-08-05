@@ -58,12 +58,12 @@
                 <data android:scheme="zeiki" android:host="unlock" />
                 <data android:scheme="zeiki" android:host="home" />
             </intent-filter>
-            <!-- HDU-007 (AC2, AC8): deep links del SDK de Supabase.
-                 El scheme `io.supabase.flutter` lo usa Supabase para
-                 los links de email confirmation y reset password. Sin
+            <!-- HDU-007 (AC8): deep links del SDK de Supabase para
+                 reset password. El scheme `io.supabase.flutter` lo usa
+                 Supabase para el link del email de reset password. Sin
                  este intent-filter, el link del email abriría el
-                 navegador (no la app) y el user quedaría sin confirmar
-                 o sin poder cambiar su contraseña.
+                 navegador (no la app) y el user no podría cambiar su
+                 contraseña.
 
                  Mantenemos `login-callback` por compatibilidad con el
                  legacy `seiki_app`, aunque el flujo de Google Sign-In
@@ -75,6 +75,12 @@
                  lo procesa `supabase_flutter._startDeeplinkObserver`,
                  no nuestro handler).
 
+                 **Cleanup verify-email (2026-08-04):** se removió el
+                 `<data android:host="verify-email" />`. Supabase no
+                 emite un evento dedicado de "verify email exitoso",
+                 así que la pantalla de confirmación nunca se muestra.
+                 Ver `chore/cleanup-verify-email-screen`.
+
                  Mismo `autoVerify="false"` que el intent-filter de
                  `zeiki://` por la misma razón: scheme custom, no App
                  Links verificados. -->
@@ -83,7 +89,6 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="io.supabase.flutter" android:host="login-callback" />
-                <data android:scheme="io.supabase.flutter" android:host="verify-email" />
                 <data android:scheme="io.supabase.flutter" android:host="reset-password" />
             </intent-filter>
         </activity>
