@@ -2,17 +2,17 @@
 
 > **Snapshot rápido del estado del proyecto.** Se actualiza en el cleanup (paso 12) de cada HDU cerrada. Para el detalle de una HDU específica, ver `specs/HDU-XXX-*.md`. Para el histórico, ver `.mavis/hdu.md`.
 
-**Última actualización:** 2026-08-03 (post-HDU-007 cerrada, PR #19 mergeado).
+**Última actualización:** 2026-08-04 (post-cleanup VerifyEmailScreen, PR #20 mergeado).
 
 ---
 
 ## 📍 Dónde estamos
 
 - **Fase:** 1 (MVP).
-- **Última unidad cerrada:** HDU-007 — Flujo de confirmación de email + reset password con deep links.
+- **Última unidad cerrada:** Cleanup de `VerifyEmailScreen` (PR #20) — código muerto de HDU-007 borrado.
 - **HDUs activas:** ninguna.
-- **BUGs activas:** ninguno.
-- **Rama `main`:** deployable (último merge: `ee07d60` — PR #19).
+- **BUGs activas:** ninguno (BUG-002b sobre "Revisa tu correo" no aparece post-signUp está agendado pero no abierto).
+- **Rama `main`:** deployable (último merge: `90b843a` — PR #20).
 - **Stack operativo:** Flutter 3.38.3 + Supabase (proyecto Zeiki, región `us-east-2`) + Deno para edge functions.
 - **Proyecto Supabase:** ref `iocbqjzmoneulydmeavr`, URL `https://iocbqjzmoneulydmeavr.supabase.co`. Config en `assets/.env` (en `.gitignore`).
 
@@ -116,12 +116,11 @@
 
 ## 🔜 Próximos pasos sugeridos (secuencia decidida con Hugo)
 
-- **QA en Xiaomi de HDU-007** (AC11). Plan completo en `specs/HDU-007-email-callback-flow.md` §"Plan de QA".
-- Después del QA, decisión sobre la siguiente unidad:
+- **Decidir la siguiente unidad de trabajo.** Opciones:
+  - **HDU-007b / BUG-002b (bugfix):** "Revisa tu correo" no aparece después de crear cuenta en `register_screen.dart`. Snippet chico (~30 min), aislado a la pantalla de register + mostrar SnackBar + navegar a /login. Sale cuando Hugo lo pida.
   - **HDU-008 (feature nueva):** descarga de CFDIs del SAT, onboarding, fiscal, o clientes.
-  - **Housekeeping bundle #6:** quedan 3 follow-ups no bloqueantes (#10, #13, #18). No urge; sale cuando haya motivo.
-  - **Polish visual + branding de pantallas** (registrado como follow-up nuevo; sale al final).
-  - **Pausa / descanso** — la sesión ha sido larga.
+  - **Polish visual + branding de pantallas** (login, register, home sin identidad de marca Zeiki).
+  - **Pausa / descanso.**
 
 ## 🐛 Follow-ups activos (de HDUs cerradas)
 
@@ -145,6 +144,7 @@
 | 16 | HDU-004 | Restringir intent filter `zeiki://` a hosts específicos en `AndroidManifest.xml`. Mismo motivo que #14. | baja | **completado (housekeeping bundle #3)** |
 | 17 | HDU-004 | Mover `appRouter` a GetIt como singleton lazy. Necesario cuando llegue HDU-005 (auth con `redirect:`) y `AuthService`. | media | **completado (se hizo en HDU-005, PR #6)** |
 | 18 | HDU-004 | Cobertura del integration test en CI: back nativo + rotación + deep link end-to-end con `adb` automatizados. | baja | **en progreso (1/? — housekeeping #18 part 1: codemagic.yaml mínimo creado, falta activar en dashboard y扩展). Ver `docs/runbooks/codemagic-setup.md`.** |
+| 32 | HDU-007 cleanup | Limpieza de 9 stubs `_FakeAuthService` que aún tienen `String? emailRedirectTo` en el override de `signUpWithEmail` (incoherente con la firma real ahora). En Dart es válido (subtipo), `flutter analyze` no se queja, pero la firma debería reflejar la realidad. | baja | pendiente (housekeeping bundle futuro) |
 | 19 | HDU-004 | Regla "push para detail/sheet, go para tab/sección" — documentar como patrón canónico cuando haya más navegación. | baja | **completado (housekeeping bundle #1)** |
 | 20 | HDU-004 | `android:label="zeiki"` en minúsculas (debería ser "Zeiki" con Z mayúscula). Pre-existente a HDU-001. | baja | **completado (housekeeping bundle #1)** |
 | 21 | HDU-004 | Renombrar test de "rotación" a "router conserva ruta tras rebuild" — el nombre actual es engañoso. | baja | **obsoleto** (el test nunca se llamó "rotación", ya era "state restoration está habilitado (AC7)" en `widget_test.dart:148`) |
