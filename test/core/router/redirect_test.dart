@@ -139,13 +139,17 @@ void main() {
   });
 
   group('AppRoute enum (HDU-005 + HDU-005b + HDU-007)', () {
-    test('declara 8 rutas: splash, onboarding, login, register, unlock, '
-        'home, auth/verify-email, auth/reset-password', () {
+    test('declara 7 rutas: splash, onboarding, login, register, unlock, '
+        'home, auth/reset-password', () {
       // HDU-004: 4 rutas. HDU-005 agregó /register (AC4). HDU-005b
       // agregó /unlock (AC15) para el cold start con biometría.
-      // HDU-007 agregó /auth/verify-email y /auth/reset-password
-      // (AC3, AC8) para los deep links de Supabase.
-      expect(AppRoute.values, hasLength(8));
+      // HDU-007 agregó /auth/reset-password (AC8) para el deep link
+      // de reset password de Supabase.
+      //
+      // Cleanup verify-email (2026-08-04): se removió /auth/verify-email.
+      // Supabase no emite un evento dedicado de "verify email exitoso",
+      // así que la pantalla de confirmación nunca se muestra.
+      expect(AppRoute.values, hasLength(7));
       expect(
         AppRoute.values.map((r) => r.path).toSet(),
         {
@@ -155,45 +159,22 @@ void main() {
           '/register',
           '/unlock',
           '/home',
-          '/auth/verify-email',
           '/auth/reset-password',
         },
       );
     });
   });
 
-  group('rutas de deep link auth (HDU-007, AC3, AC8)', () {
-    // Las rutas /auth/verify-email y /auth/reset-password son
-    // **terminales** (como /unlock). El redirect NO las redirige,
-    // independientemente de si hay sesión o no.
+  group('ruta de deep link auth (HDU-007, AC8)', () {
+    // La ruta /auth/reset-password es **terminal** (como /unlock).
+    // El redirect NO la redirige, independientemente de si hay
+    // sesión o no.
     //
-    // **Por qué terminales y no "como /login" (redirigen a /home
-    // con sesión):** el flujo de Supabase para reset password crea
-    // una sesión temporal al procesar el deep link (necesaria para
-    // que `updateUser` funcione). Si el redirect la tratara como
-    // /login, sacaría al user a /home antes de que pueda cambiar la
-    // password. Lo mismo aplica a verify-email: el user debe ver
-    // el mensaje de éxito ANTES de cualquier redirección.
-
-    test('/auth/verify-email sin sesión → no redirige (terminal)', () {
-      expect(
-        computeAuthRedirect(
-          goingTo: '/auth/verify-email',
-          isLoggedIn: false,
-        ),
-        isNull,
-      );
-    });
-
-    test('/auth/verify-email con sesión → no redirige (terminal)', () {
-      expect(
-        computeAuthRedirect(
-          goingTo: '/auth/verify-email',
-          isLoggedIn: true,
-        ),
-        isNull,
-      );
-    });
+    // **Por qué terminal y no "como /login" (redirige a /home con
+    // sesión):** el flujo de Supabase para reset password crea una
+    // sesión temporal al procesar el deep link (necesaria para que
+    // `updateUser` funcione). Si el redirect la tratara como /login,
+    // sacaría al user a /home antes de que pueda cambiar la password.
 
     test('/auth/reset-password sin sesión → no redirige (terminal)', () {
       expect(
