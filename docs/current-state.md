@@ -2,21 +2,39 @@
 
 > **Snapshot rápido del estado del proyecto.** Se actualiza en el cleanup (paso 12) de cada HDU cerrada. Para el detalle de una HDU específica, ver `specs/HDU-XXX-*.md`. Para el histórico, ver `.mavis/hdu.md`.
 
-**Última actualización:** 2026-08-06 (post-fix register screen, PR #21 mergeado).
+**Última actualización:** 2026-08-06 (post-revert PR #20, restaurar verify-email screen + emailRedirectTo + deep link).
 
 ---
 
 ## 📍 Dónde estamos
 
 - **Fase:** 1 (MVP).
-- **Última unidad cerrada:** Fix register screen — muestra "Revisa tu correo" cuando Supabase requiere confirmación (PR #21).
+- **Última unidad cerrada:** Revert PR #20 (cleanup verify-email) — restauración de `VerifyEmailScreen` + `emailRedirectTo` + `<data android:host="verify-email" />` + host en whitelist. PR #23 pendiente de merge.
 - **HDUs activas:** ninguna.
 - **BUGs activas:** ninguno.
-- **Rama `main`:** deployable (último merge: `bfc6688` — PR #21).
+- **Rama `main`:** deployable (último commit: `c2b8001` — pre-revert). La rama `revert/restore-verify-email-screen-pr20` con el fix está lista para abrir PR.
 - **Stack operativo:** Flutter 3.38.3 + Supabase (proyecto Zeiki, región `us-east-2`) + Deno para edge functions.
 - **Proyecto Supabase:** ref `iocbqjzmoneulydmeavr`, URL `https://iocbqjzmoneulydmeavr.supabase.co`. Config en `assets/.env` (en `.gitignore`).
 
 ## ✅ HDUs cerradas recientemente
+
+### Revert PR #20 (cleanup verify-email) — 2026-08-06
+- **Tipo:** chore (revert de cleanup que se pasó de rosca).
+- **PR:** [#23](https://github.com/navaworkingspaces-collab/zeiki/pull/23) — pendiente de merge.
+- **Rama:** `revert/restore-verify-email-screen-pr20` (1 commit: `250ee7e`).
+- **Cambio:** `git revert 2d348db` restaura los 12 archivos del PR #20 (185 líneas borradas → 302 líneas restauradas). Vuelve al estado pre-PR #20:
+  - `lib/features/identidad/screens/verify_email_screen.dart` (65 líneas, NUEVO otra vez).
+  - `lib/core/router/app_router.dart`: `AppRoute.verifyEmail` (8 rutas), GoRoute, rama en `computeAuthRedirect`.
+  - `lib/core/router/app_links_handler.dart`: host `'verify-email'` en `_allowedDeepLinkHosts` y `_supabaseHostToPath`.
+  - `lib/core/auth/auth_service.dart`: `emailRedirectTo: 'io.supabase.flutter://verify-email/'` en `signUpWithEmail` + parámetro `String? emailRedirectTo` en el typedef.
+  - `android/app/src/main/AndroidManifest.xml`: `<data android:scheme="io.supabase.flutter" android:host="verify-email" />` (3 hosts: verify-email, login-callback, reset-password).
+  - 6 tests restaurados (1 en `auth_service_test.dart`, 1 en `app_router_test.dart`, 2 en `app_links_handler_test.dart`, 2 en `redirect_test.dart`).
+  - Docs: `specs/HDU-007-email-callback-flow.md` y `docs/runbooks/google-signin-supabase.md` con la sección de email confirmation completa otra vez.
+- **Razón:** el cleanup del PR #20 borró piezas necesarias para que el link del email de confirmación abriera la app en Xiaomi. El intento de fix parcial (rama `fix/restore-verify-email-deep-link`, 3 commits, no mergeada) restauró `emailRedirectTo` + el host del manifest + los tests, **pero omitió la pantalla** y mantuvo el enum en 7 rutas. No resolvió el comportamiento end-to-end. Decisión de Hugo: volver al estado pre-PR #20 (cuando el flujo sí funcionaba) y abrir una HDU separada para decidir qué hacer con la pantalla que "no se muestra" (Target §11).
+- **Pipeline:** `flutter analyze` 0, `flutter test` **222/222** verde. Diff vs main: +8 tests agregados, −2 borrados (neto +6). `flutter build apk --debug` OK. **Nota:** los 2 tests que el usuario anticipó que podían necesitar ajuste (`_SupabaseStubs.signUpLastEmailRedirectTo` y el de `io.supabase.flutter://verify-email`) NO requirieron cambios — el revert los restauró tal cual porque la lógica del PR #21 (`fix/register-show-email-confirmation`) no chocaba con la firma restaurada de `signUpWithEmail`.
+- **QA en Xiaomi:** **pendiente post-merge.** Hugo debe verificar: (a) tap en link del email de confirmación → la app abre, (b) Supabase procesa el token, (c) el user termina en `/home` (o `/login` con sesión temporal según el flujo de HDU-007).
+- **Estado de la rama `fix/restore-verify-email-deep-link`:** se queda como histórico del intento de fix parcial que no resolvió. NO se mergea, NO se borra. Quedará divergente después del merge del revert — eso está bien.
+- **Lección:** ver regla "Cleanup ≠ borrar todo lo relacionado" en la sección de Lecciones aprendidas (2026-08-06).
 
 ### HDU-001 — Base del proyecto Flutter (2026-07-29)
 - PR #1 mergeado a main.
@@ -116,8 +134,9 @@
 
 ## 🔜 Próximos pasos sugeridos (secuencia decidida con Hugo)
 
-- **Decidir la siguiente unidad de trabajo.** Opciones:
-  - **HDU-007b / BUG-002b (bugfix):** "Revisa tu correo" no aparece después de crear cuenta en `register_screen.dart`. Snippet chico (~30 min), aislado a la pantalla de register + mostrar SnackBar + navegar a /login. Sale cuando Hugo lo pida.
+- **Pendiente bloqueante (post-merge del PR #23):** **QA en Xiaomi** del revert del PR #20. Verificar que el link del email de confirmación abre la app, Supabase procesa el token, y el user termina en `/home` (ver follow-up #33).
+- **Decidir la siguiente unidad de trabajo después del QA.** Opciones:
+  - **HDU-007b (decisión sobre VerifyEmailScreen):** ahora que la pantalla está restaurada, decidir qué hacer con ella. La pantalla existe pero el flujo real de Supabase no la usa (Supabase redirige al Site URL, no a la app). Opciones: (a) dejarla como dead code documentado por si se necesita en el futuro, (b) implementar un flujo de "link expirado / link inválido" que sí la use, (c) hacer el cleanup correcto esta vez — borrar SOLO la pantalla + ajustar la lógica de deep link, sin tocar `emailRedirectTo` ni el host del manifest. Salida esperada: spec + tests + cleanup bien hecho.
   - **HDU-008 (feature nueva):** descarga de CFDIs del SAT, onboarding, fiscal, o clientes.
   - **Polish visual + branding de pantallas** (login, register, home sin identidad de marca Zeiki).
   - **Pausa / descanso.**
@@ -144,7 +163,8 @@
 | 16 | HDU-004 | Restringir intent filter `zeiki://` a hosts específicos en `AndroidManifest.xml`. Mismo motivo que #14. | baja | **completado (housekeeping bundle #3)** |
 | 17 | HDU-004 | Mover `appRouter` a GetIt como singleton lazy. Necesario cuando llegue HDU-005 (auth con `redirect:`) y `AuthService`. | media | **completado (se hizo en HDU-005, PR #6)** |
 | 18 | HDU-004 | Cobertura del integration test en CI: back nativo + rotación + deep link end-to-end con `adb` automatizados. | baja | **en progreso (1/? — housekeeping #18 part 1: codemagic.yaml mínimo creado, falta activar en dashboard y扩展). Ver `docs/runbooks/codemagic-setup.md`.** |
-| 32 | HDU-007 cleanup | Limpieza de 9 stubs `_FakeAuthService` que aún tienen `String? emailRedirectTo` en el override de `signUpWithEmail` (incoherente con la firma real ahora). En Dart es válido (subtipo), `flutter analyze` no se queja, pero la firma debería reflejar la realidad. | baja | pendiente (housekeeping bundle futuro) |
+| 32 | HDU-007 cleanup | Limpieza de 9 stubs `_FakeAuthService` que aún tienen `String? emailRedirectTo` en el override de `signUpWithEmail` (incoherente con la firma real ahora). En Dart es válido (subtipo), `flutter analyze` no se queja, pero la firma debería reflejar la realidad. | baja | **obsoleto (revertido por PR #23)**: el revert del PR #20 restauró `String? emailRedirectTo` en la firma real de `signUpWithEmail`. Los overrides de los 9 fakes vuelven a ser coherentes con la firma — ya no hay drift. |
+| 33 | Revert PR #20 | **QA post-merge en Xiaomi (2203129G):** instalar el APK, crear cuenta con email, abrir el link del email de confirmación, verificar que (a) la app abre, (b) Supabase procesa el token, (c) el user termina en `/home` o `/login` con sesión temporal. Si falla, reportar a Mavis para HDU-007b. | alta | **pendiente post-merge PR #23**. El pipeline (analyze/test/build) ya pasó, pero tests NO cubren el comportamiento end-to-end del deep link en device real (lección #8). |
 | 19 | HDU-004 | Regla "push para detail/sheet, go para tab/sección" — documentar como patrón canónico cuando haya más navegación. | baja | **completado (housekeeping bundle #1)** |
 | 20 | HDU-004 | `android:label="zeiki"` en minúsculas (debería ser "Zeiki" con Z mayúscula). Pre-existente a HDU-001. | baja | **completado (housekeeping bundle #1)** |
 | 21 | HDU-004 | Renombrar test de "rotación" a "router conserva ruta tras rebuild" — el nombre actual es engañoso. | baja | **obsoleto** (el test nunca se llamó "rotación", ya era "state restoration está habilitado (AC7)" en `widget_test.dart:148`) |
@@ -161,6 +181,7 @@
 
 ## 📚 Lecciones aprendidas recientes
 
+- **2026-08-06 — "Cleanup ≠ borrar todo lo relacionado":** el PR #20 (`chore/cleanup-verify-email-screen`) intentó borrar una pantalla que "nunca se usa" (`VerifyEmailScreen`). El cleanup se pasó de rosca: además de la pantalla, borró el `emailRedirectTo` en `auth_service.dart`, el `<data android:host="verify-email" />` del manifest, y el host del whitelist de deep links. Esas 3 piezas NO estaban en la pantalla — eran infraestructura necesaria para que el link del email de confirmación abriera la app. El fix parcial (PR #22) restauró las 3 piezas pero omitió la pantalla; no resolvió el comportamiento end-to-end en Xiaomi. **Lección:** cuando hagas un cleanup, **lista explícitamente qué archivos/funciones/configs son "infraestructura" y NO se tocan, aunque estén relacionados con el código a borrar**. Si la pantalla vive en `features/identidad/screens/` pero el `emailRedirectTo` vive en `core/auth/`, son 2 cosas distintas — borrar una no implica borrar la otra. Antes de borrar, pregúntate: "¿este cambio rompe un flujo que NO es el que estoy limpiando?". Si la respuesta es "no sé", es un signo de que falta análisis. **Acción operativa:** cualquier cleanup que toque > 3 archivos requiere un mapa de dependencias explícito en la spec (qué archivos son código objetivo, cuáles son infraestructura relacionada, cuáles son tests/docs).
 - **2026-07-29 — "Si los planos lo dicen, no se pregunta, se hace":** el spec de HDU-001 omitió `lib/core/tiers/`, pero Target §6 y ADR-010 la mencionan. No se pregunta al usuario, se corrige el spec y se crea la carpeta. Lección completa en `memory/MEMORY.md` (agente).
 - **2026-07-29 — "Lo que el auditor marca, se hace":** las 5 notas del `zeiki-auditor` no se "registran como follow-up", se aplican en el momento (o se descartan con razón explícita). 2 aplicadas en este cleanup, 2 registradas como aprendizaje, 1 zona gris documentada en `conventions.md`.
 - **2026-07-29 — "El legacy es referencia, no verdad":** la HDU-EXPLORE-001 reportó que el bug del cortado "ya estaba arreglado en el legacy". Eso es lo que el código legacy DICE, no es verdad verificada. **Lección:** tratar el legacy como referencia, no como fuente de verdad. Lo que el legacy afirma sobre sus propios bugs debe verificarse antes de aceptarlo como base.
