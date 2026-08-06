@@ -91,6 +91,10 @@ class BiometricActivationDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
+      // Key estable para que los tests de pantalla (register /
+      // login) puedan verificar presencia/ausencia del dialog sin
+      // acoplarse al texto del título (que puede cambiar).
+      key: const Key('biometric_activation_dialog'),
       // Título corto para que el dialog se vea como un prompt, no
       // como un modal de información. El contenido principal es el
       // body.

@@ -64,11 +64,31 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final router = GoRouter.of(context);
 
     try {
-      await auth.signUpWithEmail(
+      final result = await auth.signUpWithEmail(
         email: _emailCtrl.text.trim(),
         password: _passwordCtrl.text,
       );
       if (!mounted) return;
+
+      // Detectar si Supabase creó sesión (confirmación desactivada) o
+      // no (confirmación activada). Cuando el proyecto tiene
+      // `Enable email confirmations` = ON, Supabase crea el user pero
+      // devuelve `session: null` — el user NO está logueado hasta
+      // confirmar el correo. Si no lo detectamos, navegamos a /home
+      // con sesión nula, el redirect del router nos manda a /login
+      // y el user queda en limbo sin entender qué pasó.
+      if (result.session == null) {
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text('Cuenta creada. Revisa tu correo para confirmar.'),
+            duration: Duration(seconds: 6),
+          ),
+        );
+        router.go(AppRoute.login.path);
+        return; // Importante: no mostrar biometría (no hay sesión, no hay userId).
+      }
+
+      // Confirmación desactivada: sesión creada directo. Flujo normal.
       // HDU-005b AC5-AC9: popup "¿Activar huella?" después del primer
       // register exitoso. One-shot por sesión (ver
       // BiometricActivationService). Se muestra ANTES de navegar a
