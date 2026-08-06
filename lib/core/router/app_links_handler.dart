@@ -9,9 +9,8 @@
 //   - `zeiki://<host>` (HDU-004) — scheme interno de Zeiki para
 //     navegación entre rutas (login, home, etc.).
 //   - `io.supabase.flutter://<host>` (HDU-007) — scheme del SDK de
-//     Supabase para los deep links de email (solo reset password
-//     después del cleanup; verify-email nunca se mostró).
-//     Mantenemos este scheme para que el link del email
+//     Supabase para los deep links de email (confirmación + reset
+//     password). Mantenemos este scheme para que el link del email
 //     generado por Supabase apunte a la app sin necesidad de dominio
 //     ni App Links verificados (ver
 //     `specs/HDU-007-email-callback-flow.md` §1, knowledge reuse del
@@ -23,6 +22,7 @@
 //
 // **Traducción de host → path:**
 //   - `zeiki://login` → `/login`
+//   - `io.supabase.flutter://verify-email` → `/auth/verify-email`
 //   - `io.supabase.flutter://reset-password` → `/auth/reset-password`
 //
 // La función `wireDeepLinks` devuelve una `StreamSubscription` que el
@@ -67,6 +67,7 @@ const _allowedDeepLinkHosts = <String>{
   'register',
   'unlock',
   'home',
+  'verify-email',
   'reset-password',
 };
 
@@ -76,8 +77,10 @@ const _allowedDeepLinkHosts = <String>{
 /// 1:1 (`host` → `/host`).
 ///
 /// Por ejemplo:
+///   - `io.supabase.flutter://verify-email` → `/auth/verify-email`
 ///   - `io.supabase.flutter://reset-password` → `/auth/reset-password`
 const _supabaseHostToPath = <String, String>{
+  'verify-email': '/auth/verify-email',
   'reset-password': '/auth/reset-password',
 };
 

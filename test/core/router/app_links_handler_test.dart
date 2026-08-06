@@ -73,16 +73,19 @@ void main() {
       expect(zeikiUriToPath(Uri.parse('zeiki://unlock')), '/unlock');
     });
 
-    // HDU-007: el flujo de reset password usa scheme
-    // `io.supabase.flutter://` (knowledge reuse del legacy, ver
-    // `specs/HDU-007-email-callback-flow.md` §1). El handler acepta
-    // ese scheme además de `zeiki://` para enrutar la app a la
-    // pantalla de reset-password.
-    //
-    // Cleanup verify-email (2026-08-04): se removió el flujo de
-    // email confirmation. La pantalla `/auth/verify-email` ya no
-    // existe (Supabase no emite un evento dedicado de "verify email
-    // exitoso"). El test correspondiente se borró.
+    // HDU-007: el flujo de email confirmation + reset password usa
+    // scheme `io.supabase.flutter://` (knowledge reuse del legacy,
+    // ver `specs/HDU-007-email-callback-flow.md` §1). El handler
+    // acepta ese scheme además de `zeiki://` para enrutar la app a
+    // las pantallas de verify-email y reset-password.
+    test('io.supabase.flutter://verify-email → /auth/verify-email (HDU-007, '
+        'AC2, AC3)', () {
+      expect(
+        zeikiUriToPath(Uri.parse('io.supabase.flutter://verify-email')),
+        '/auth/verify-email',
+      );
+    });
+
     test('io.supabase.flutter://reset-password → /auth/reset-password '
         '(HDU-007, AC8)', () {
       expect(
@@ -101,6 +104,15 @@ void main() {
       // para que `zeikiUriToPath` lo rechace (defense in depth).
       expect(
         zeikiUriToPath(Uri.parse('io.supabase.flutter://login-callback')),
+        isNull,
+      );
+    });
+
+    test('https://io.supabase.flutter/verify-email → null (scheme '
+        'no permitido aunque el host sea válido)', () {
+      // El scheme es `https`, no `io.supabase.flutter`. No enrutamos.
+      expect(
+        zeikiUriToPath(Uri.parse('https://io.supabase.flutter/verify-email')),
         isNull,
       );
     });
