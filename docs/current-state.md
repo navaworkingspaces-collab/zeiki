@@ -2,17 +2,17 @@
 
 > **Snapshot rápido del estado del proyecto.** Se actualiza en el cleanup (paso 12) de cada HDU cerrada. Para el detalle de una HDU específica, ver `specs/HDU-XXX-*.md`. Para el histórico, ver `.mavis/hdu.md`.
 
-**Última actualización:** 2026-08-04 (post-cleanup VerifyEmailScreen, PR #20 mergeado).
+**Última actualización:** 2026-08-06 (post-fix register screen, PR #21 mergeado).
 
 ---
 
 ## 📍 Dónde estamos
 
 - **Fase:** 1 (MVP).
-- **Última unidad cerrada:** Cleanup de `VerifyEmailScreen` (PR #20) — código muerto de HDU-007 borrado.
+- **Última unidad cerrada:** Fix register screen — muestra "Revisa tu correo" cuando Supabase requiere confirmación (PR #21).
 - **HDUs activas:** ninguna.
-- **BUGs activas:** ninguno (BUG-002b sobre "Revisa tu correo" no aparece post-signUp está agendado pero no abierto).
-- **Rama `main`:** deployable (último merge: `90b843a` — PR #20).
+- **BUGs activas:** ninguno.
+- **Rama `main`:** deployable (último merge: `bfc6688` — PR #21).
 - **Stack operativo:** Flutter 3.38.3 + Supabase (proyecto Zeiki, región `us-east-2`) + Deno para edge functions.
 - **Proyecto Supabase:** ref `iocbqjzmoneulydmeavr`, URL `https://iocbqjzmoneulydmeavr.supabase.co`. Config en `assets/.env` (en `.gitignore`).
 
