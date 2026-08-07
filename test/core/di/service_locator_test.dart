@@ -204,12 +204,10 @@ void main() {
   //
   // **Por qué usamos `buildAppRouter` directo (no `getIt<GoRouter>()`):**
   // `getIt<GoRouter>()` reusa el singleton lazy, pero queremos un
-  // router con la ruta `/auth/reset-password` que `buildAppRouter`
-  // ya declara. El factory de `service_locator` usa `buildAppRouter`
-  // también, así que el comportamiento bajo test es el mismo.
-  //
-  // Cleanup verify-email (2026-08-04): se removió `/auth/verify-email`
-  // de la lista.
+  // router con la ruta `/auth/reset-password` + `/auth/verify-email`
+  // que `buildAppRouter` ya declara. El factory de `service_locator`
+  // usa `buildAppRouter` también, así que el comportamiento bajo
+  // test es el mismo.
   group('PasswordRecoveryListener (HDU-007 — red de seguridad)', () {
     late StreamController<sb.AuthState> authStateController;
     late AuthService fakeAuth;

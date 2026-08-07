@@ -205,22 +205,21 @@ Por ahora (MVP) solo se necesita el SHA-1 de debug.
 
 ---
 
-## Addendum (HDU-007) — Reset password usa deep links
+## Addendum (HDU-007) — Email confirmation y reset password usan deep links
 
-> **Aplica desde HDU-007.** El flujo de reset password usa deep
-> links para abrir directamente en la app en vez de en el
-> navegador. El scheme es `io.supabase.flutter://` (mismo que
-> usaba el legacy `seiki_app`, knowledge reuse según ADR-009). NO
-> usa HTTPS / App Links verificados (sale en HDU futura cuando
-> Zeiki tenga dominio).
->
-> **Cleanup verify-email (2026-08-04):** se removió la parte de
-> email confirmation de este addendum. Supabase no emite un evento
-> dedicado de "verify email exitoso", así que la pantalla
-> intermedia de confirmación nunca se mostraba. El flujo de
-> signup sigue funcionando a nivel Supabase (el link llega a la
-> app y la sesión se crea), pero NO hay pantalla `/auth/verify-email`.
+> **Aplica desde HDU-007.** Los flujos de confirmación de email
+> (signup) y de reset password también usan deep links para abrir
+> directamente en la app en vez de en el navegador. El scheme es
+> `io.supabase.flutter://` (mismo que usaba el legacy `seiki_app`,
+> knowledge reuse según ADR-009). NO usa HTTPS / App Links
+> verificados (sale en HDU futura cuando Zeiki tenga dominio).
 
+- **Email confirmation:** cuando un user se registra con
+  `AuthService.signUpWithEmail`, Supabase manda un email con un
+  link `io.supabase.flutter://verify-email/?token=...`. Al hacer
+  tap, Android abre Zeiki (gracias al intent-filter en
+  `AndroidManifest.xml`) y la app navega a `/auth/verify-email`
+  con un mensaje de éxito + CTA a /login.
 - **Reset password:** desde el botón "¿Olvidaste tu contraseña?" en
   LoginScreen, el user pide el link. Supabase manda un email con
   `io.supabase.flutter://reset-password/?token=...`. Al hacer tap,
@@ -232,13 +231,14 @@ si la config está OK, pero si pasa):
 
 1. Verifica que el `AndroidManifest.xml` tiene el intent-filter con
    `android:scheme="io.supabase.flutter"` y los hosts
-   `reset-password` + `login-callback` (ver `lib/.../AndroidManifest.xml`).
+   `verify-email` + `reset-password` (ver `lib/.../AndroidManifest.xml`).
 2. Verifica que en Supabase Dashboard → **Authentication** →
    **URL Configuration** esté permitido el redirect. Hoy Zeiki no
-   necesita agregar nada ahí (el `redirectTo` es absoluto,
+   necesita agregar nada ahí (el `emailRedirectTo` es absoluto,
    no se valida contra la lista), pero si en el futuro Supabase
-   lo exige, agregar `io.supabase.flutter://reset-password/` como
-   redirect URI permitido.
+   lo exige, agregar `io.supabase.flutter://verify-email/` y
+   `io.supabase.flutter://reset-password/` como redirect URIs
+   permitidos.
 3. Si el flujo sigue sin funcionar, capturar log de la app
    (`adb logcat | grep -i 'app_links\|supabase'`) y ver si la URI
    llega al plugin.

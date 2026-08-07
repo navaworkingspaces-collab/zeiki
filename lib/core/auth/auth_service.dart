@@ -9,12 +9,10 @@
 //     `signInWithIdToken`).
 //   - Expone una API síncrona para el redirect del router
 //     (`getCurrentSession()`).
-//   - Maneja el deep link de Supabase para reset password
-//     (`redirectTo` en `resetPasswordForEmail`, HDU-007 AC7) para que
-//     el link de reset password abra la app directamente. El
-//     `emailRedirectTo` de signUp se removió en el cleanup de
-//     verify-email (Supabase usa el Site URL por default del
-//     proyecto).
+//   - Maneja el deep link de Supabase (`emailRedirectTo` en
+//     signUp + `redirectTo` en resetPasswordForEmail) para que el
+//     link de confirmación y el de reset password abran la app
+//     directamente (HDU-007, AC1, AC7).
 //
 // **Regla arquitectónica (Target §6):** los features consumen
 // `AuthService` desde GetIt, NUNCA `Supabase.instance.client.auth`
@@ -55,6 +53,7 @@ class UserCancelledAuthFlow implements Exception {
 typedef SignUpWithEmailFn = Future<sb.AuthResponse> Function({
   required String email,
   required String password,
+  String? emailRedirectTo,
 });
 typedef SignInWithEmailFn = Future<sb.AuthResponse> Function({
   required String email,
@@ -139,13 +138,10 @@ class AuthService {
   /// registrado, `AuthException(weakPassword)` si Supabase rechaza la
   /// contraseña.
   ///
-  /// **Cleanup verify-email (2026-08-04):** ya no se pasa
-  /// `emailRedirectTo`. Supabase usa el **Site URL** del proyecto
-  /// (configurado en el dashboard) como redirect default del email
-  /// de confirmación. Ver `chore/cleanup-verify-email-screen` para
-  /// el detalle (Supabase no emite un evento dedicado de "verify
-  /// email exitoso", así que la pantalla de confirmación nunca
-  /// se muestra).
+  /// **HDU-007 (AC1):** pasa `emailRedirectTo: io.supabase.flutter://verify-email/`
+  /// al callback de Supabase. Sin esto, Supabase usa el redirect default
+  /// del proyecto (típicamente `localhost:3000`) y el link de confirmación
+  /// no abre la app — el user queda en limbo sin poder confirmar.
   Future<AuthResult> signUpWithEmail({
     required String email,
     required String password,
@@ -154,6 +150,7 @@ class AuthService {
       return await _signUpWithEmailFn(
         email: email,
         password: password,
+        emailRedirectTo: 'io.supabase.flutter://verify-email/',
       );
     } catch (e) {
       throw mapSupabaseAuthError(e);
@@ -300,10 +297,12 @@ class AuthService {
 Future<sb.AuthResponse> _defaultSignUpWithEmail({
   required String email,
   required String password,
+  String? emailRedirectTo,
 }) {
   return sb.Supabase.instance.client.auth.signUp(
     email: email,
     password: password,
+    emailRedirectTo: emailRedirectTo,
   );
 }
 
