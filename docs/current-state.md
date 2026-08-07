@@ -2,21 +2,38 @@
 
 > **Snapshot rápido del estado del proyecto.** Se actualiza en el cleanup (paso 12) de cada HDU cerrada. Para el detalle de una HDU específica, ver `specs/HDU-XXX-*.md`. Para el histórico, ver `.mavis/hdu.md`.
 
-**Última actualización:** 2026-08-06 (post-revert PR #20, restaurar verify-email screen + emailRedirectTo + deep link).
+**Última actualización:** 2026-08-06 (post-HDU-007b cleanup, 2 commits revertibles en `chore/cleanup-verify-email-screen-v2`).
 
 ---
 
 ## 📍 Dónde estamos
 
 - **Fase:** 1 (MVP).
-- **Última unidad cerrada:** Revert PR #20 (cleanup verify-email) — restauración de `VerifyEmailScreen` + `emailRedirectTo` + `<data android:host="verify-email" />` + host en whitelist. PR #23 pendiente de merge.
+- **Última unidad cerrada:** HDU-007b (cleanup verify-email screen) — 2 commits revertibles independientemente en `chore/cleanup-verify-email-screen-v2`. Commit 1 borra la pantalla + enum + GoRoute + host del whitelist del handler + actualiza tests (incluido test de regresión nuevo). Commit 2 archiva el spec original, actualiza el runbook y este snapshot. NO mergeado a `revert/restore-verify-email-screen-pr20` todavía — Hugo decide push + PR + merge.
 - **HDUs activas:** ninguna.
 - **BUGs activas:** ninguno.
-- **Rama `main`:** deployable (último commit: `c2b8001` — pre-revert). La rama `revert/restore-verify-email-screen-pr20` con el fix está lista para abrir PR.
+- **Rama `main`:** deployable (último commit: `b2d7839` — docs del revert del PR #20, post-merge del revert). La rama `chore/cleanup-verify-email-screen-v2` con los 2 commits de HDU-007b está lista para push + PR.
 - **Stack operativo:** Flutter 3.38.3 + Supabase (proyecto Zeiki, región `us-east-2`) + Deno para edge functions.
 - **Proyecto Supabase:** ref `iocbqjzmoneulydmeavr`, URL `https://iocbqjzmoneulydmeavr.supabase.co`. Config en `assets/.env` (en `.gitignore`).
 
 ## ✅ HDUs cerradas recientemente
+
+### HDU-007b — Cleanup VerifyEmailScreen (never rendered) — 2026-08-06
+- **Tipo:** chore.
+- **Rama:** `chore/cleanup-verify-email-screen-v2` (2 commits: `b47043b` código + `[pendiente]` docs).
+- **Cambio:** 2 commits revertibles independientemente:
+  - **Commit 1 (`b47043b`):** borra `lib/features/identidad/screens/verify_email_screen.dart` (65 líneas, dead code). Remueve `AppRoute.verifyEmail` + `GoRoute` + import + rama en `computeAuthRedirect` en `app_router.dart`. Remueve `verify-email` de `_allowedDeepLinkHosts` y `_supabaseHostToPath` en `app_links_handler.dart`. Actualiza 4 archivos de test (4 tests borrados: 1 en `app_router_test`, 2 en `redirect_test`, 1 en `app_links_handler_test`) + 1 test de regresión nuevo en `app_links_handler_test` (verifica que `io.supabase.flutter://verify-email` devuelve `null` post-cleanup). Actualiza un comentario en `service_locator_test`. **Diff: 7 archivos, +84 / −162 líneas.**
+  - **Commit 2:** archiva `specs/HDU-007-email-callback-flow.md` → `docs/archive/2026-08-06-HDU-007-original-with-verify-email-screen.md` (la spec original describe la pantalla que se removió; el comportamiento real actual — Supabase procesa el token, sesión activa, redirect a `/home` — no tenía spec). Actualiza `docs/runbooks/google-signin-supabase.md` (sección "Email confirmation": ya no menciona la pantalla dedicada, explica el flujo real + nota sobre el host `verify-email` en el manifest). Actualiza este snapshot.
+- **Lo que NO se tocó** (regla de la triada de deep link):
+  - `lib/core/auth/auth_service.dart`: `emailRedirectTo: 'io.supabase.flutter://verify-email/'` se mantiene (Supabase sigue mandando el email con este redirect, el handler solo lo ignora).
+  - `android/app/src/main/AndroidManifest.xml`: el intent-filter sigue con los 3 hosts (`login-callback`, `verify-email`, `reset-password`) — Android los necesita para abrir la app desde el link del email.
+  - `_supabaseHostToPath['reset-password']`: se mantiene; el flujo de reset password sigue funcionando.
+  - `test/core/auth/auth_service_test.dart` líneas 94-112: test de regresión `'pasa emailRedirectTo al callback de Supabase (HDU-007, AC1)'` se mantiene intacto.
+- **Razón:** la pantalla `VerifyEmailScreen` (65 líneas + enum + ruta + GoRoute + import + whitelist + 4 tests) era dead code en el flujo real. Supabase no emite un evento dedicado de "verificación exitosa" — cuando el user hace tap en el link del email, el SDK de Supabase procesa el token ANTES de que el handler de Dart enrute, la sesión queda activa, y el `redirect` del router manda al user a `/home` sin pasar por la pantalla. La pantalla nunca se renderizaba. El revert del PR #20 (rama `revert/restore-verify-email-screen-pr20`, mergeada en `b2d7839`) la restauró, pero la regla del problema real es la misma: Supabase procesa el token y crea la sesión. La pantalla sigue sin renderizarse.
+- **Test de regresión nuevo:** `'io.supabase.flutter://verify-email → null (host removido del whitelist, HDU-007b)'` en `test/core/router/app_links_handler_test.dart`. Garantiza que si alguien intenta restaurar el host al whitelist, el test va a fallar y va a forzar a revisar si la razón de removerlo (Supabase procesa antes) sigue vigente.
+- **Pipeline Commit 1:** `flutter analyze` 0 issues, `flutter test` **219/219** verde (222 antes del revert, −4 tests borrados por el revert + −3 tests borrados por este cleanup + 1 test de regresión nuevo + 0 de PR #21 que se mantiene = 219). `flutter build apk --debug` OK.
+- **QA en Xiaomi:** **pendiente.** Hugo debe verificar: (a) tap en link del email de confirmación → la app abre, (b) NO se muestra `/auth/verify-email` (debe ir directo a `/home` o `/login`), (c) la sesión queda activa, (d) el flujo de reset password sigue funcionando normal.
+- **Lección:** "Cleanup parcial" sigue siendo un anti-patrón (regla del 2026-08-06 sobre "Cleanup ≠ borrar todo lo relacionado"). Pero este cleanup es seguro porque la pantalla + enum + ruta + host-del-whitelist + tests son UNA unidad cohesiva (borrar uno sin los demás rompe tests o el redirect). El `emailRedirectTo` y el host del manifest son otra unidad (necesaria para que Android abra la app) y NO se tocan. Las dos unidades están documentadas y aisladas, así que el cleanup es seguro.
 
 ### Revert PR #20 (cleanup verify-email) — 2026-08-06
 - **Tipo:** chore (revert de cleanup que se pasó de rosca).

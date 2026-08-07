@@ -218,8 +218,22 @@ Por ahora (MVP) solo se necesita el SHA-1 de debug.
   `AuthService.signUpWithEmail`, Supabase manda un email con un
   link `io.supabase.flutter://verify-email/?token=...`. Al hacer
   tap, Android abre Zeiki (gracias al intent-filter en
-  `AndroidManifest.xml`) y la app navega a `/auth/verify-email`
-  con un mensaje de éxito + CTA a /login.
+  `AndroidManifest.xml`) y la app abre directamente. **No hay
+  pantalla dedicada de "verificado, ya puedes iniciar sesión":**
+  Supabase procesa el token del deep link antes de que el handler
+  de Dart enrute, la sesión queda activa, y el `redirect` del
+  router evalúa con la sesión ya creada y lleva al user a `/home`
+  (dashboard). Si la sesión NO se crea (token expirado, ya usado,
+  etc.), el redirect lleva al user a `/login` con sesión inactiva
+  y se muestra el flujo normal de login.
+  **Nota (2026-08, HDU-007b):** la pantalla dedicada
+  `/auth/verify-email` se removió porque Supabase no emite un
+  evento dedicado de "verificación exitosa" — la pantalla no se
+  renderizaba en el flujo real. El host `verify-email` sigue en
+  el intent-filter del manifest (Android lo necesita para que el
+  link abra la app) pero ya no está en el whitelist del handler
+  de Dart, así que el deep link se ignora silenciosamente y el
+  flujo descrito arriba toma el control.
 - **Reset password:** desde el botón "¿Olvidaste tu contraseña?" en
   LoginScreen, el user pide el link. Supabase manda un email con
   `io.supabase.flutter://reset-password/?token=...`. Al hacer tap,
@@ -231,7 +245,17 @@ si la config está OK, pero si pasa):
 
 1. Verifica que el `AndroidManifest.xml` tiene el intent-filter con
    `android:scheme="io.supabase.flutter"` y los hosts
-   `verify-email` + `reset-password` (ver `lib/.../AndroidManifest.xml`).
+   `login-callback` + `verify-email` + `reset-password`
+   (ver `lib/.../AndroidManifest.xml`). **Nota HDU-007b:** el
+   host `verify-email` se mantiene en el manifest para que
+   Android abra la app, pero el handler de Dart lo ignora
+   silenciosamente (Supabase procesa el token antes). Si
+   Supabase empieza a quejarse por hosts "no usados", se puede
+   quitar del manifest sin romper el flujo (siempre que
+   `emailRedirectTo` apunte a un scheme que SÍ esté en el
+   intent-filter — hoy apunta a `verify-email`, así que
+   **NO quitar** `verify-email` del manifest sin antes cambiar
+   el `emailRedirectTo` en `auth_service.dart`).
 2. Verifica que en Supabase Dashboard → **Authentication** →
    **URL Configuration** esté permitido el redirect. Hoy Zeiki no
    necesita agregar nada ahí (el `emailRedirectTo` es absoluto,

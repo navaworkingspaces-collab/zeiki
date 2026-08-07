@@ -99,10 +99,10 @@ void main() {
     });
   });
 
-  group('AppRoute enum (HDU-004 + HDU-005 + HDU-005b + HDU-007)', () {
-    test('declara las 8 rutas (HDU-004 + /register HDU-005 + /unlock HDU-005b '
-        '+ /auth/verify-email + /auth/reset-password HDU-007)', () {
-      expect(AppRoute.values, hasLength(8));
+  group('AppRoute enum (HDU-004 + HDU-005 + HDU-005b + HDU-007, post HDU-007b)', () {
+    test('declara las 7 rutas (HDU-004 + /register HDU-005 + /unlock HDU-005b '
+        '+ /auth/reset-password HDU-007; /auth/verify-email removido en HDU-007b)', () {
+      expect(AppRoute.values, hasLength(7));
       expect(
         AppRoute.values.map((r) => r.path).toSet(),
         {
@@ -112,7 +112,6 @@ void main() {
           '/register',
           '/unlock',
           '/home',
-          '/auth/verify-email',
           '/auth/reset-password',
         },
       );
@@ -128,7 +127,7 @@ void main() {
     });
 
     test('cada AppRoute path resuelve sin error (HDU-004 + HDU-005 + HDU-005b '
-        '+ HDU-007)', () {
+        '+ HDU-007, post HDU-007b)', () {
       for (final route in AppRoute.values) {
         final match = router.configuration.findMatch(Uri.parse(route.path));
         expect(
@@ -145,15 +144,6 @@ void main() {
       expect(matchList.isError, isFalse,
           reason: 'HDU-005b: /unlock debe existir para el cold start con '
               'sesión + biometría');
-      expect(matchList.matches, isNotEmpty);
-    });
-
-    test('resuelve /auth/verify-email sin error (HDU-007, AC3)', () {
-      final matchList = router.configuration
-          .findMatch(Uri.parse('/auth/verify-email'));
-      expect(matchList.isError, isFalse,
-          reason: 'HDU-007: el deep link de email confirmation debe '
-              'enrutar a /auth/verify-email');
       expect(matchList.matches, isNotEmpty);
     });
 

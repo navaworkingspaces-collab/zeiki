@@ -73,25 +73,38 @@ void main() {
       expect(zeikiUriToPath(Uri.parse('zeiki://unlock')), '/unlock');
     });
 
-    // HDU-007: el flujo de email confirmation + reset password usa
-    // scheme `io.supabase.flutter://` (knowledge reuse del legacy,
-    // ver `specs/HDU-007-email-callback-flow.md` §1). El handler
-    // acepta ese scheme además de `zeiki://` para enrutar la app a
-    // las pantallas de verify-email y reset-password.
-    test('io.supabase.flutter://verify-email → /auth/verify-email (HDU-007, '
-        'AC2, AC3)', () {
-      expect(
-        zeikiUriToPath(Uri.parse('io.supabase.flutter://verify-email')),
-        '/auth/verify-email',
-      );
-    });
-
+    // HDU-007: el flujo de reset password usa scheme
+    // `io.supabase.flutter://` (knowledge reuse del legacy, ver
+    // `specs/HDU-007-email-callback-flow.md` §1). El handler acepta
+    // ese scheme además de `zeiki://` para enrutar la app a la
+    // pantalla de reset-password.
+    //
+    // **HDU-007b:** el deep link de confirmación de email
+    // (`io.supabase.flutter://verify-email`) ya NO se traduce a
+    // una ruta de Zeiki. Supabase procesa el token antes de que el
+    // handler enrute, así que ignorar el deep link es correcto: el
+    // redirect del router se evalúa con la sesión ya activa y
+    // manda al user a `/home`. Ver el test de regresión
+    // `io.supabase.flutter://verify-email → null` más abajo.
     test('io.supabase.flutter://reset-password → /auth/reset-password '
         '(HDU-007, AC8)', () {
       expect(
         zeikiUriToPath(Uri.parse('io.supabase.flutter://reset-password')),
         '/auth/reset-password',
       );
+    });
+
+    // HDU-007b — test de regresión. Después del cleanup, el host
+    // `verify-email` ya no está en `_allowedDeepLinkHosts`. El
+    // deep link se ignora silenciosamente (devuelve `null`) en
+    // lugar de navegar a una ruta inexistente.
+    test('io.supabase.flutter://verify-email → null (host removido del '
+        'whitelist, HDU-007b)', () {
+      final path = zeikiUriToPath(Uri.parse('io.supabase.flutter://verify-email'));
+      expect(path, isNull,
+          reason: 'verify-email host ya no está en el whitelist post-HDU-007b. '
+              'El deep link se ignora silenciosamente; Supabase procesa el '
+              'token y la sesión se crea antes de que el handler enrute.');
     });
 
     test('io.supabase.flutter://login-callback → null (whitelist: '
