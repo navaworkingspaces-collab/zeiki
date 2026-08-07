@@ -36,21 +36,23 @@ import 'dart:async';
 //     inyectable y testeable.
 //
 // Cambios de HDU-007 (esta HDU):
-//   - **2 rutas nuevas para deep links de Supabase:**
-//     `/auth/verify-email` (AC3) y `/auth/reset-password` (AC8).
-//   - **Ambas son terminales** (como `/unlock`): el redirect NO las
-//     redirige, independientemente de si hay sesión o no.
+//   - **Ruta nueva para deep link de reset password de Supabase:**
+//     `/auth/reset-password` (AC8).
+//   - **La ruta `/auth/verify-email` (AC3) se removió en HDU-007b.**
+//     El flujo de confirmación de email se resuelve sin pantalla
+//     dedicada: Supabase procesa el token del deep link, la sesión
+//     queda activa, y el redirect del router envía al user a `/home`.
+//   - **La ruta que queda es terminal** (como `/unlock`): el redirect
+//     NO la redirige, independientemente de si hay sesión o no.
 //
-//     **Por qué terminales y no "como /login" (que sí redirige a
+//     **Por qué terminal y no "como /login" (que sí redirige a
 //     /home con sesión activa):** el flujo de Supabase para reset
 //     password crea una sesión temporal al procesar el deep link
 //     (necesaria para que `updateUser` funcione). Si el redirect la
 //     tratara como /login, sacaría al user a /home antes de que
-//     pueda cambiar la password. Lo mismo aplica a verify-email:
-//     el user debe ver el mensaje de éxito ANTES de cualquier
-//     redirección. La spec (§5) sugiere "como /login", pero el
-//     comportamiento real de Supabase requiere terminales — esta es
-//     una excepción documentada.
+//     pueda cambiar la password. La spec (§5) sugiere "como /login",
+//     pero el comportamiento real de Supabase requiere terminal — esta
+//     es una excepción documentada.
 //
 // **Por qué el redirect NO consulta biometricEnabled:** el redirect
 // aplica a CADA navegación, no solo al cold start. Si el user está
@@ -71,7 +73,6 @@ import '../../features/identidad/screens/register_screen.dart';
 import '../../features/identidad/screens/reset_password_screen.dart';
 import '../../features/identidad/screens/splash_screen.dart';
 import '../../features/identidad/screens/unlock_screen.dart';
-import '../../features/identidad/screens/verify_email_screen.dart';
 import 'screens/onboarding_placeholder.dart';
 
 /// Rutas declaradas por el router. El `.path` es lo que se usa en
@@ -79,8 +80,9 @@ import 'screens/onboarding_placeholder.dart';
 ///
 /// **HDU-005** agregó `register`. **HDU-005b** agrega `unlock` para el
 /// cold start con sesión + biometría habilitada. **HDU-007** agrega
-/// `verifyEmail` y `resetPassword` para los deep links de Supabase
-/// (email confirmation + reset password).
+/// `resetPassword` para el deep link de Supabase. La ruta dedicada de
+/// `verifyEmail` (también de HDU-007) se removió en HDU-007b — el
+/// flujo de confirmación de email se resuelve sin pantalla dedicada.
 enum AppRoute {
   splash('/splash'),
   onboarding('/onboarding'),
@@ -88,7 +90,6 @@ enum AppRoute {
   register('/register'),
   unlock('/unlock'),
   home('/home'),
-  verifyEmail('/auth/verify-email'),
   resetPassword('/auth/reset-password');
 
   const AppRoute(this.path);
@@ -105,8 +106,7 @@ enum AppRoute {
 ///   - `/login`, `/register`    → redirigen a `/home` si hay sesión.
 ///   - `/unlock`                → terminal; el `UnlockScreen`
 ///                                decide internamente.
-///   - `/auth/verify-email`,
-///     `/auth/reset-password`   → terminales (HDU-007). Ver bloque de
+///   - `/auth/reset-password`   → terminal (HDU-007). Ver bloque de
 ///                                cambios HDU-007 en la cabecera de
 ///                                este archivo para el porqué técnico.
 ///   - Rutas privadas (`/home` y futuras) sin sesión → `/login`.
@@ -114,7 +114,8 @@ enum AppRoute {
 /// **No hay loops infinitos:** el `redirect` de `go_router` deja de
 /// llamar a la función cuando el resultado es `null`. Las reglas
 /// anteriores garantizan que `/login` sin sesión, `/home` con sesión,
-/// `/unlock` y las 2 rutas de HDU-007 siempre son terminales.
+/// `/unlock` y la ruta de reset-password de HDU-007 siempre son
+/// terminales.
 String? computeAuthRedirect({
   required String goingTo,
   required bool isLoggedIn,
@@ -127,7 +128,6 @@ String? computeAuthRedirect({
     return isLoggedIn ? AppRoute.home.path : null;
   }
   if (goingTo == AppRoute.unlock.path ||
-      goingTo == AppRoute.verifyEmail.path ||
       goingTo == AppRoute.resetPassword.path) {
     return null;
   }
@@ -244,11 +244,6 @@ GoRouter buildAppRouter({
         path: AppRoute.home.path,
         builder: (BuildContext context, GoRouterState state) =>
             const HomeScreen(),
-      ),
-      GoRoute(
-        path: AppRoute.verifyEmail.path,
-        builder: (BuildContext context, GoRouterState state) =>
-            const VerifyEmailScreen(),
       ),
       GoRoute(
         path: AppRoute.resetPassword.path,

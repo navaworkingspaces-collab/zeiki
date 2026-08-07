@@ -9,12 +9,19 @@
 //   - `zeiki://<host>` (HDU-004) — scheme interno de Zeiki para
 //     navegación entre rutas (login, home, etc.).
 //   - `io.supabase.flutter://<host>` (HDU-007) — scheme del SDK de
-//     Supabase para los deep links de email (confirmación + reset
-//     password). Mantenemos este scheme para que el link del email
-//     generado por Supabase apunte a la app sin necesidad de dominio
-//     ni App Links verificados (ver
+//     Supabase para los deep links de email (reset password y, antes
+//     de HDU-007b, confirmación de cuenta). Mantenemos este scheme
+//     para que el link del email generado por Supabase apunte a la
+//     app sin necesidad de dominio ni App Links verificados (ver
 //     `specs/HDU-007-email-callback-flow.md` §1, knowledge reuse del
 //     legacy `seiki_app`).
+//
+//     **HDU-007b:** el host `verify-email` se removió del whitelist
+//     porque la pantalla dedicada de confirmación se eliminó. El
+//     deep link de email de confirmación ahora se ignora
+//     silenciosamente — Supabase procesa el token y crea la sesión
+//     antes de que el handler enrute, así que el `redirect` del
+//     router lleva al user a `/home` con la sesión ya activa.
 //
 // **Hosts válidos:** cualquier host fuera de `_allowedDeepLinkHosts`
 // se ignora silenciosamente. El whitelist limita la superficie de
@@ -22,8 +29,9 @@
 //
 // **Traducción de host → path:**
 //   - `zeiki://login` → `/login`
-//   - `io.supabase.flutter://verify-email` → `/auth/verify-email`
 //   - `io.supabase.flutter://reset-password` → `/auth/reset-password`
+//   - (HDU-007b) `io.supabase.flutter://verify-email` se ignora
+//     silenciosamente: el host ya no está en el whitelist.
 //
 // La función `wireDeepLinks` devuelve una `StreamSubscription` que el
 // caller debe cancelar cuando la app se cierre (en `main.dart` no es
@@ -67,7 +75,6 @@ const _allowedDeepLinkHosts = <String>{
   'register',
   'unlock',
   'home',
-  'verify-email',
   'reset-password',
 };
 
@@ -77,10 +84,10 @@ const _allowedDeepLinkHosts = <String>{
 /// 1:1 (`host` → `/host`).
 ///
 /// Por ejemplo:
-///   - `io.supabase.flutter://verify-email` → `/auth/verify-email`
 ///   - `io.supabase.flutter://reset-password` → `/auth/reset-password`
+///   - (HDU-007b) `io.supabase.flutter://verify-email` ya no entra
+///     aquí — el host fue removido del whitelist.
 const _supabaseHostToPath = <String, String>{
-  'verify-email': '/auth/verify-email',
   'reset-password': '/auth/reset-password',
 };
 
